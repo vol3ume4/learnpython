@@ -1,66 +1,64 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb } from 'lucide-react';
-import { courseContent, Section } from '@/lib/course-content';
+import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy } from 'lucide-react';
+import { courseData } from '@/lib/course-content';
 import { usePyodide } from '@/hooks/usePyodide';
+import { DifficultyLevel, Exercise } from '@/lib/types';
 import clsx from 'clsx';
 
 export default function Home() {
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>('easy');
   const [code, setCode] = useState("");
   const { isReady, runCode, output, isRunning, resetOutput } = usePyodide();
   const [showHint, setShowHint] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  const currentSection = courseContent.sections[currentSectionIndex];
-  const isLastSection = currentSectionIndex === courseContent.sections.length - 1;
+  const currentChapter = courseData.chapters[currentChapterIndex];
+  const currentSection = currentChapter.sections[currentSectionIndex];
+  const isLastSection = currentSectionIndex === currentChapter.sections.length - 1;
   const isFirstSection = currentSectionIndex === 0;
 
-  // Reset state when section changes
+  // Get exercises filtered by difficulty
+  const currentExercises = currentSection.type === 'exercises' && currentSection.exercises
+    ? currentSection.exercises.filter(ex => ex.level === selectedDifficulty)
+    : [];
+
+  const currentExercise = currentExercises[currentExerciseIndex];
+  const isLastExercise = currentExerciseIndex === currentExercises.length - 1;
+  const isFirstExercise = currentExerciseIndex === 0;
+
+  // Reset state when section or exercise changes
   useEffect(() => {
-    if (currentSection.type === 'example' && currentSection.code) {
-      setCode(currentSection.code);
-    } else if (currentSection.type === 'exercise' && currentSection.exercise) {
-      setCode(currentSection.exercise.starterCode);
+    if (currentSection.type === 'examples' && currentSection.examples && currentSection.examples[0]) {
+      setCode(currentSection.examples[0].code);
+    } else if (currentSection.type === 'exercises' && currentExercise) {
+      setCode(currentExercise.starterCode);
     } else {
       setCode("");
     }
     resetOutput();
     setShowHint(false);
     setIsCorrect(null);
-  }, [currentSectionIndex]);
+  }, [currentSectionIndex, currentExerciseIndex, selectedDifficulty]);
 
   const handleRun = async () => {
     resetOutput();
+    setIsCorrect(null);
     await runCode(code);
-
-    // Simple validation for exercises
-    if (currentSection.type === 'exercise' && currentSection.exercise) {
-      // We need to wait a bit for the output to populate or check the result logic
-      // For this PoC, we'll check the output after a short delay or assume the output hook updates fast enough.
-      // Actually, since runCode awaits, the output state might not be updated immediately in this render cycle if it's async state updates.
-      // A better way is to check the output in a useEffect or pass a callback.
-      // For now, let's just check the output in the next render or use a timeout.
-
-      // HACK: Allow state to update. In a real app, we'd return the result from runCode.
-      setTimeout(() => {
-        // This is a bit hacky because we are reading the state from the hook which might be stale in this closure
-        // But let's try to read the output from the DOM or just rely on the user to see the result for now.
-        // Actually, let's implement a "Check" button separate from "Run" for clarity.
-      }, 100);
-    }
   };
 
   const handleCheck = () => {
-    if (currentSection.type !== 'exercise' || !currentSection.exercise) return;
+    if (!currentExercise) return;
 
-    const expected = currentSection.exercise.expectedOutput.trim();
+    const expected = currentExercise.expectedOutput.trim();
     const actual = output.join('\n').trim();
 
-    if (actual.includes(expected)) {
+    if (actual === expected || actual.includes(expected)) {
       setIsCorrect(true);
     } else {
       setIsCorrect(false);
@@ -68,11 +66,33 @@ export default function Home() {
   };
 
   const nextSection = () => {
-    if (!isLastSection) setCurrentSectionIndex(prev => prev + 1);
+    if (!isLastSection) {
+      setCurrentSectionIndex(prev => prev + 1);
+      setCurrentExerciseIndex(0);
+    }
   };
 
   const prevSection = () => {
-    if (!isFirstSection) setCurrentSectionIndex(prev => prev - 1);
+    if (!isFirstSection) {
+      setCurrentSectionIndex(prev => prev - 1);
+      setCurrentExerciseIndex(0);
+    }
+  };
+
+  const nextExercise = () => {
+    if (!isLastExercise) setCurrentExerciseIndex(prev => prev + 1);
+  };
+
+  const prevExercise = () => {
+    if (!isFirstExercise) setCurrentExerciseIndex(prev => prev - 1);
+  };
+
+  const getDifficultyColor = (level: DifficultyLevel) => {
+    switch (level) {
+      case 'easy': return 'text-green-400 bg-green-900/30 border-green-700';
+      case 'medium': return 'text-yellow-400 bg-yellow-900/30 border-yellow-700';
+      case 'hard': return 'text-red-400 bg-red-900/30 border-red-700';
+    }
   };
 
   return (
@@ -80,48 +100,136 @@ export default function Home() {
       {/* Left Panel: Content */}
       <div className="w-1/2 flex flex-col border-r border-slate-800">
         {/* Header */}
-        <header className="p-6 border-b border-slate-800 bg-slate-900/50">
+        <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
           <div className="flex items-center gap-2 text-sm text-blue-400 font-medium mb-2">
-            <span>{courseContent.title}</span>
+            <span>{courseData.title}</span>
             <span>/</span>
-            <span>Step {currentSectionIndex + 1} of {courseContent.sections.length}</span>
+            <span>{currentChapter.title}</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{currentSection.title}</h1>
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+            {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}
+            {currentSection.type === 'examples' && <Code2 className="w-8 h-8 text-purple-400" />}
+            {currentSection.type === 'exercises' && <Trophy className="w-8 h-8 text-yellow-400" />}
+            {currentSection.title}
+          </h1>
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 prose prose-invert max-w-none">
-          <div className="whitespace-pre-wrap text-lg leading-relaxed text-slate-300">
-            {currentSection.content}
-          </div>
+        <div className="flex-1 overflow-y-auto p-8">
+          {/* Theory Section */}
+          {currentSection.type === 'theory' && (
+            <div className="prose prose-invert max-w-none">
+              <div className="text-lg leading-relaxed text-slate-300 whitespace-pre-wrap">
+                {currentSection.content}
+              </div>
+            </div>
+          )}
 
-          {currentSection.type === 'exercise' && currentSection.exercise && (
-            <div className="mt-8 p-6 bg-slate-900 rounded-xl border border-slate-800">
-              <h3 className="text-xl font-semibold text-white mb-4">Your Task</h3>
-              <p className="mb-4 text-slate-300">{currentSection.exercise.question}</p>
+          {/* Examples Section */}
+          {currentSection.type === 'examples' && currentSection.examples && (
+            <div className="space-y-6">
+              {currentSection.examples.map((example, idx) => (
+                <div key={idx} className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                  <div className="p-4 bg-slate-800/50 border-b border-slate-700">
+                    <h3 className="text-lg font-semibold text-white">Example {idx + 1}</h3>
+                  </div>
+                  <div className="p-6">
+                    <pre className="bg-slate-950 p-4 rounded-lg mb-4 overflow-x-auto">
+                      <code className="text-sm text-slate-300">{example.code}</code>
+                    </pre>
+                    <p className="text-slate-400 leading-relaxed">{example.explanation}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-              {showHint && (
-                <div className="mb-4 p-4 bg-blue-950/30 border border-blue-900/50 rounded-lg text-blue-200 flex items-start gap-3">
-                  <Lightbulb className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                  <p>{currentSection.exercise.hint}</p>
+          {/* Exercises Section */}
+          {currentSection.type === 'exercises' && (
+            <div>
+              {/* Difficulty Selector */}
+              <div className="mb-6 flex gap-3">
+                {(['easy', 'medium', 'hard'] as DifficultyLevel[]).map(level => (
+                  <button
+                    key={level}
+                    onClick={() => {
+                      setSelectedDifficulty(level);
+                      setCurrentExerciseIndex(0);
+                    }}
+                    className={clsx(
+                      "px-4 py-2 rounded-lg font-medium transition-all border",
+                      selectedDifficulty === level
+                        ? getDifficultyColor(level)
+                        : "text-slate-500 bg-slate-900 border-slate-700 hover:border-slate-600"
+                    )}
+                  >
+                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {currentExercise && (
+                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-white">
+                      Exercise {currentExerciseIndex + 1} of {currentExercises.length}
+                    </h3>
+                    <span className={clsx(
+                      "px-3 py-1 rounded-full text-xs font-bold border",
+                      getDifficultyColor(selectedDifficulty)
+                    )}>
+                      {selectedDifficulty.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="mb-6 text-slate-300 text-lg leading-relaxed">
+                    {currentExercise.question}
+                  </p>
+
+                  {showHint && (
+                    <div className="mb-4 p-4 bg-blue-950/30 border border-blue-900/50 rounded-lg text-blue-200 flex items-start gap-3">
+                      <Lightbulb className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <p>{currentExercise.hint}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowHint(!showHint)}
+                      className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                      {showHint ? "Hide Hint" : "Show Hint"}
+                    </button>
+                    <button
+                      onClick={() => setCode(currentExercise.solution)}
+                      className="text-sm text-slate-400 hover:text-white transition-colors ml-auto"
+                    >
+                      Show Solution
+                    </button>
+                  </div>
+
+                  {/* Exercise Navigation */}
+                  {currentExercises.length > 1 && (
+                    <div className="mt-6 pt-6 border-t border-slate-700 flex justify-between items-center">
+                      <button
+                        onClick={prevExercise}
+                        disabled={isFirstExercise}
+                        className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        ← Previous Exercise
+                      </button>
+                      <button
+                        onClick={nextExercise}
+                        disabled={isLastExercise}
+                        className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next Exercise →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowHint(!showHint)}
-                  className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  {showHint ? "Hide Hint" : "Show Hint"}
-                </button>
-                <button
-                  onClick={() => setCode(currentSection.exercise!.solution)}
-                  className="text-sm text-slate-400 hover:text-white transition-colors ml-auto"
-                >
-                  Show Solution
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -138,8 +246,7 @@ export default function Home() {
           </button>
 
           <div className="flex gap-2">
-            {/* Dots indicator */}
-            {courseContent.sections.map((_, idx) => (
+            {currentChapter.sections.map((section, idx) => (
               <div
                 key={idx}
                 className={clsx(
@@ -168,7 +275,13 @@ export default function Home() {
           <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">main.py</span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCode(currentSection.type === 'exercise' ? currentSection.exercise!.starterCode : "")}
+              onClick={() => {
+                if (currentSection.type === 'exercises' && currentExercise) {
+                  setCode(currentExercise.starterCode);
+                } else if (currentSection.type === 'examples' && currentSection.examples?.[0]) {
+                  setCode(currentSection.examples[0].code);
+                }
+              }}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
               title="Reset Code"
             >
@@ -225,7 +338,7 @@ export default function Home() {
               Run Code
             </button>
 
-            {currentSection.type === 'exercise' && (
+            {currentSection.type === 'exercises' && currentExercise && (
               <button
                 onClick={handleCheck}
                 className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600"
@@ -242,10 +355,10 @@ export default function Home() {
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Terminal</span>
             {isCorrect !== null && (
               <span className={clsx(
-                "text-xs font-bold px-2 py-1 rounded",
+                "text-xs font-bold px-2 py-1 rounded flex items-center gap-1",
                 isCorrect ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"
               )}>
-                {isCorrect ? "CORRECT!" : "TRY AGAIN"}
+                {isCorrect ? <><CheckCircle className="w-3 h-3" /> CORRECT!</> : <><XCircle className="w-3 h-3" /> TRY AGAIN</>}
               </span>
             )}
           </div>
@@ -257,11 +370,10 @@ export default function Home() {
                 <div key={i} className="text-slate-300 mb-1">{line}</div>
               ))
             )}
-            {/* Success/Fail Message in Terminal */}
             {isCorrect === true && (
               <div className="mt-4 text-green-400 font-bold flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
-                Great job! You can move to the next section.
+                Perfect! Try the next exercise or move to the next section.
               </div>
             )}
             {isCorrect === false && (

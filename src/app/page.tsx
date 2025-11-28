@@ -22,6 +22,8 @@ export default function Home() {
   const currentSection = currentChapter.sections[currentSectionIndex];
   const isLastSection = currentSectionIndex === currentChapter.sections.length - 1;
   const isFirstSection = currentSectionIndex === 0;
+  const isLastChapter = currentChapterIndex === courseData.chapters.length - 1;
+  const isFirstChapter = currentChapterIndex === 0;
 
   // Get exercises filtered by difficulty
   const currentExercises = currentSection.type === 'exercises' && currentSection.exercises
@@ -44,7 +46,7 @@ export default function Home() {
     resetOutput();
     setShowHint(false);
     setIsCorrect(null);
-  }, [currentSectionIndex, currentExerciseIndex, selectedDifficulty]);
+  }, [currentSectionIndex, currentExerciseIndex, selectedDifficulty, currentChapterIndex]);
 
   const handleRun = async () => {
     resetOutput();
@@ -69,12 +71,23 @@ export default function Home() {
     if (!isLastSection) {
       setCurrentSectionIndex(prev => prev + 1);
       setCurrentExerciseIndex(0);
+    } else if (!isLastChapter) {
+      // Move to next chapter
+      setCurrentChapterIndex(prev => prev + 1);
+      setCurrentSectionIndex(0);
+      setCurrentExerciseIndex(0);
     }
   };
 
   const prevSection = () => {
     if (!isFirstSection) {
       setCurrentSectionIndex(prev => prev - 1);
+      setCurrentExerciseIndex(0);
+    } else if (!isFirstChapter) {
+      // Move to previous chapter's last section
+      setCurrentChapterIndex(prev => prev - 1);
+      const prevChapter = courseData.chapters[currentChapterIndex - 1];
+      setCurrentSectionIndex(prevChapter.sections.length - 1);
       setCurrentExerciseIndex(0);
     }
   };
@@ -238,7 +251,7 @@ export default function Home() {
         <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
           <button
             onClick={prevSection}
-            disabled={isFirstSection}
+            disabled={isFirstSection && isFirstChapter}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -259,7 +272,7 @@ export default function Home() {
 
           <button
             onClick={nextSection}
-            disabled={isLastSection}
+            disabled={isLastSection && isLastChapter}
             className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-blue-900/20"
           >
             Next

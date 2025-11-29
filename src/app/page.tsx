@@ -401,11 +401,7 @@ export default function Home() {
         />
       )}
 
-      {/* Left Panel: Content */}
-      <div className="w-1/2 flex flex-col border-r border-slate-800">
-        {/* Header */}
-        <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
-          <div className="flex justify-between items-start mb-2">
+<div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowTOC(true)}
@@ -420,6 +416,16 @@ export default function Home() {
                 <span>{currentChapter.title}</span>
               </div>
             </div>
+            {/* ADD SIGN OUT BUTTON HERE */}
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push('/login');
+              }}
+              className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-800"
+            >
+              Sign Out
+            </button>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 ml-14">
             {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}

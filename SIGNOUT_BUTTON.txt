@@ -1,0 +1,11 @@
+// ADD this after line 422 (after the closing </div> of the breadcrumb):
+
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push('/login');
+              }}
+              className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-800"
+            >
+              Sign Out
+            </button>

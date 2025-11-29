@@ -572,66 +572,11 @@ export default function Home() {
               </div>
 
       {/* Privacy / Mode Selection Modal (Placeholder for Auth) */}
-            {showPrivacyModal && (
-              <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden">
-                  <div className="p-8 space-y-6">
-                    <div className="space-y-2">
-                      <h2 className="text-2xl font-bold text-white">Welcome to LearnPython! 🐍</h2>
-                      <p className="text-slate-400">Your privacy is our priority. We believe in transparent learning.</p>
-                    </div>
-
-                    <div className="bg-slate-800/50 rounded-xl p-6 space-y-4 border border-slate-700">
-                      <h3 className="font-semibold text-blue-400 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Privacy Commitment
-                      </h3>
-                      <ul className="space-y-2 text-sm text-slate-300">
-                        <li className="flex gap-2">
-                          <span className="text-slate-500">•</span>
-                          We only store your progress to help you pick up where you left off.
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-slate-500">•</span>
-                          Your code is processed securely and never shared with third parties for advertising.
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-slate-500">•</span>
-                          You can delete your data at any time.
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                      <button
-                        onClick={() => {
-                          setLearningMode('guided');
-                          setShowPrivacyModal(false);
-                        }}
-                        className="group relative p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all text-left space-y-2"
-                      >
-                        <div className="absolute top-4 right-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <CheckCircle className="w-5 h-5" />
-                        </div>
-                        <div className="font-bold text-blue-400">Guided Mode 🚀</div>
-                        <p className="text-xs text-slate-400">Best for beginners. Get AI hints, progress tracking, and certificates.</p>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setLearningMode('stealth');
-                          setShowPrivacyModal(false);
-                        }}
-                        className="group p-4 rounded-xl border border-slate-700 bg-slate-800/30 hover:bg-slate-800/50 transition-all text-left space-y-2"
-                      >
-                        <div className="font-bold text-slate-300">Stealth Mode 🥷</div>
-                        <p className="text-xs text-slate-400">No login required. Just code. Progress is saved in your browser only.</p>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* {showPrivacyModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            ...
+        </div>
+      )} */}
           </main>
           );
 }

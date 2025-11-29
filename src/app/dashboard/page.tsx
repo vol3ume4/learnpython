@@ -51,16 +51,23 @@ export default function DashboardPage() {
     };
 
     const toggleGuidedMode = async (newValue: boolean) => {
+        console.log("Attempting to toggle Guided Mode to:", newValue);
+        console.log("Current User ID:", user?.id);
+
         try {
             setGuidedMode(newValue);
 
-            // FIX: Use upsert instead of update to handle missing rows
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('user_settings')
                 .upsert({ user_id: user.id, guided_mode: newValue })
                 .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase Upsert Error:", error);
+                throw error;
+            }
+
+            console.log("Supabase Upsert Success. Data:", data);
 
         } catch (error: any) {
             console.error('Error updating settings:', error);

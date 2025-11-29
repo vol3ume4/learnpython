@@ -19,6 +19,46 @@ export default function Home() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showTOC, setShowTOC] = useState(false);
 
+  // AI Tutor State
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const askAI = async (type: 'explain_error' | 'hint') => {
+    setIsAiLoading(true);
+    setAiFeedback(null);
+
+    try {
+      const errorMsg = output.find(line => line.includes("Error")) || "";
+
+      const response = await fetch('/api/ai-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          error: errorMsg,
+          type,
+          context: {
+            question: currentExercise?.question || "",
+            output: output.join("\n")
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.text) {
+        setAiFeedback(data.text);
+      } else if (data.details) {
+        setAiFeedback(`Error: ${data.details}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setAiFeedback("Sorry, I couldn't connect to the AI tutor right now.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const currentChapter = courseData.chapters[currentChapterIndex];
   const currentSection = currentChapter.sections[currentSectionIndex];
   const isLastSection = currentSectionIndex === currentChapter.sections.length - 1;
@@ -439,6 +479,27 @@ export default function Home() {
                 Check Answer
               </button>
             )}
+
+            {/* AI Help Buttons */}
+            {output.some(line => line.includes("Error")) && (
+              <button
+                onClick={() => askAI('explain_error')}
+                disabled={isAiLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all disabled:opacity-50"
+              >
+                {isAiLoading ? "Thinking..." : "Explain Error"}
+              </button>
+            )}
+
+            {currentSection.type === 'exercises' && (
+              <button
+                onClick={() => askAI('hint')}
+                disabled={isAiLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-900/30 text-purple-400 border border-purple-800 hover:bg-purple-900/50 transition-all disabled:opacity-50"
+              >
+                {isAiLoading ? "Thinking..." : "✨ AI Hint"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -463,6 +524,22 @@ export default function Home() {
                 <div key={i} className="text-slate-300 mb-1">{line}</div>
               ))
             )}
+
+            {/* AI Feedback Display */}
+            {aiFeedback && (
+              <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
+                    ✨ AI Tutor
+                  </h4>
+                  <button onClick={() => setAiFeedback(null)} className="text-slate-500 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiFeedback}</p>
+              </div>
+            )}
+
             {isCorrect === true && (
               <div className="mt-4 text-green-400 font-bold flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />

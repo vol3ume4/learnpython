@@ -1,0 +1,20 @@
+// REPLACE lines 547-554 in src/app/page.tsx with this:
+
+                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
+                      <span className="text-4xl font-bold text-white">
+                        {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Revision Complete!</h2>
+                    {(() => {
+                      const score = quizResults.filter(r => r.correct).length;
+                      const total = quizQuestions.length;
+                      const percentage = (score / total) * 100;
+
+                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect! You're ready for the main quiz! 🌟</p>;
+                      if (percentage >= 80) return <p className="text-xl text-blue-400">Great work! You've got this! 💪</p>;
+                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good progress! Review and try again! 📚</p>;
+                      if (percentage >= 40) return <p className="text-xl text-orange-400">Keep practicing! You're improving! 🔄</p>;
+                      return <p className="text-xl text-slate-400">Take your time and review the material! 🚀</p>;
+                    })()}
+                  </div>

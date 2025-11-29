@@ -19,46 +19,6 @@ export default function Home() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showTOC, setShowTOC] = useState(false);
 
-  // AI Tutor State
-  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(true);
-  const [learningMode, setLearningMode] = useState<'guided' | 'stealth' | null>(null);
-
-  const askAI = async (type: 'explain_error' | 'hint' | 'evaluate') => {
-    setIsAiLoading(true);
-    setAiFeedback(null);
-
-    try {
-      const errorMsg = output.find(line => line.includes("Error")) || "";
-
-      const response = await fetch('/api/ai-help', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          error: errorMsg,
-          type,
-          context: {
-            question: currentExercise?.question || "",
-            output: output.join("\n")
-          }
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.text) {
-        setAiFeedback(data.text);
-      }
-    } catch (err) {
-      console.error(err);
-      setAiFeedback("Sorry, I couldn't connect to the AI tutor right now.");
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   const currentChapter = courseData.chapters[currentChapterIndex];
   const currentSection = currentChapter.sections[currentSectionIndex];
   const isLastSection = currentSectionIndex === currentChapter.sections.length - 1;
@@ -447,129 +407,77 @@ export default function Home() {
             {!isReady ? (
               <span className="text-yellow-500 text-sm flex items-center gap-2">
                 <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                <div className="p-4 bg-[#252526] border-t border-[#333] flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleRun}
-                      disabled={!isReady || isRunning}
-                      className={clsx(
-                        "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg",
-                        isRunning
-                          ? "bg-slate-700 text-slate-400 cursor-wait"
-                          : "bg-green-600 text-white hover:bg-green-500 hover:scale-105 shadow-green-900/20"
-                      )}
-                    >
-                      <Play className={clsx("w-5 h-5", isRunning && "animate-spin")} />
-                      {isRunning ? "Running..." : "Run Code"}
-                    </button>
+                Loading Python Environment...
+              </span>
+            ) : (
+              <span className="text-green-500 text-sm flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Ready
+              </span>
+            )}
+          </div>
 
-                    {currentSection.type === 'exercises' && (
-                      <button
-                        onClick={handleCheck}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/20 hover:scale-105"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                        Check Answer
-                      </button>
-                    )}
-                  </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleRun}
+              disabled={!isReady || isRunning}
+              className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-900/20"
+            >
+              {isRunning ? (
+                <span className="animate-spin">⟳</span>
+              ) : (
+                <Play className="w-4 h-4 fill-current" />
+              )}
+              Run Code
+            </button>
 
-                  {/* AI Help Buttons */}
-                  <div className="flex items-center gap-2">
-                    {/* Only show Explain Error if there is an error in output */}
-                    {output.some(line => line.includes("Error")) && (
-                      <button
-                        onClick={() => askAI('explain_error')}
-                        disabled={isAiLoading}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all"
-                      >
-                        {isAiLoading ? "Thinking..." : "Explain Error"}
-                      </button>
-                    )}
+            {currentSection.type === 'exercises' && currentExercise && (
+              <button
+                onClick={handleCheck}
+                className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600"
+              >
+                Check Answer
+              </button>
+            )}
+          </div>
+        </div>
 
-                    {/* Only show AI Hint for exercises */}
-                    {currentSection.type === 'exercises' && (
-                      <button
-                        onClick={() => askAI('hint')}
-                        disabled={isAiLoading}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-900/30 text-purple-400 border border-purple-800 hover:bg-purple-900/50 transition-all"
-                      >
-                        {isAiLoading ? "Thinking..." : "✨ AI Hint"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Terminal Output */}
-                <div className="h-1/3 bg-[#1e1e1e] border-t border-[#333] flex flex-col">
-                  <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
-                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Terminal</span>
-                    <button
-                      onClick={resetOutput}
-                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="flex-1 p-4 font-mono text-sm overflow-y-auto">
-                    {output.length === 0 ? (
-                      <div className="text-slate-600 italic">Output will appear here...</div>
-                    ) : (
-                      <div className="space-y-1">
-                        {output.map((line, i) => (
-                          <div key={i} className={clsx(
-                            line.includes("Error") ? "text-red-400" : "text-slate-300"
-                          )}>
-                            {line}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* AI Feedback Display */}
-                    {aiFeedback && (
-                      <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg animate-in fade-in slide-in-from-bottom-2">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
-                            ✨ AI Tutor
-                          </h4>
-                          <button onClick={() => setAiFeedback(null)} className="text-slate-500 hover:text-white">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiFeedback}</p>
-                      </div>
-                    )}
-
-                    {isCorrect !== null && (
-                      <div className={clsx(
-                        "mt-4 p-4 rounded-lg border flex items-center gap-3",
-                        isCorrect
-                          ? "bg-green-900/20 border-green-800 text-green-400"
-                          : "bg-red-900/20 border-red-800 text-red-400"
-                      )}>
-                        {isCorrect ? (
-                          <>
-                            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                            <div>
-                              <div className="font-bold">Correct!</div>
-                              <div className="text-sm opacity-90">Great job! You can move to the next exercise.</div>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-5 h-5 flex-shrink-0" />
-                            <div>
-                              <div className="font-bold">Incorrect</div>
-                              <div className="text-sm opacity-90">Check your output and try again.</div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* Terminal Output */}
+        <div className="h-1/3 bg-[#1e1e1e] border-t border-[#333] flex flex-col">
+          <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Terminal</span>
+            {isCorrect !== null && (
+              <span className={clsx(
+                "text-xs font-bold px-2 py-1 rounded flex items-center gap-1",
+                isCorrect ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"
+              )}>
+                {isCorrect ? <><CheckCircle className="w-3 h-3" /> CORRECT!</> : <><XCircle className="w-3 h-3" /> TRY AGAIN</>}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 p-4 font-mono text-sm overflow-y-auto">
+            {output.length === 0 ? (
+              <span className="text-slate-600 italic">Output will appear here...</span>
+            ) : (
+              output.map((line, i) => (
+                <div key={i} className="text-slate-300 mb-1">{line}</div>
+              ))
+            )}
+            {isCorrect === true && (
+              <div className="mt-4 text-green-400 font-bold flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Perfect! Try the next exercise or move to the next section.
               </div>
+            )}
+            {isCorrect === false && (
+              <div className="mt-4 text-red-400 font-bold flex items-center gap-2">
+                <XCircle className="w-5 h-5" />
+                Not quite. Check the hint or try again!
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </main>
-          );
+  );
 }

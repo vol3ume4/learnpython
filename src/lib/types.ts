@@ -18,7 +18,7 @@ export type Example = {
 export type Section = {
     id: string;
     title: string;
-    type: 'theory' | 'examples' | 'exercises';
+    type: 'theory' | 'examples' | 'exercises' | 'quiz';
     content?: string; // For theory
     examples?: Example[]; // For examples section
     exercises?: Exercise[]; // For exercises section

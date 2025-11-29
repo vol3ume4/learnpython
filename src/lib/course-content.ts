@@ -183,6 +183,11 @@ You can think of variables as sticky notes you place on different objects. The n
                             expectedOutput: "13"
                         }
                     ]
+                },
+                {
+                    id: "variables-quiz",
+                    title: "Optional Surprise Quiz",
+                    type: "quiz"
                 }
             ]
         },

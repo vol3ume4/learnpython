@@ -296,8 +296,8 @@ export default function Home() {
 
     setIsAiLoading(true);
     let isCorrect = false;
-
     let feedback = "";
+    let suggestion = "";
 
     try {
       const response = await fetch('/api/analyze-answer', {
@@ -314,7 +314,7 @@ export default function Home() {
       const data = await response.json();
       isCorrect = data.correct !== undefined ? data.correct : false;
       feedback = data.feedback || "";
-      const suggestion = data.suggestion || "";
+      suggestion = data.suggestion || "";
     } catch (error) {
       console.error('AI evaluation failed:', error);
       // Fallback to simple comparison

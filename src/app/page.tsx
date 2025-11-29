@@ -123,19 +123,48 @@ export default function Home() {
     await runCode(code);
   };
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     const exercise = currentSection.type === 'exercises' ? currentExercise :
       (quizStage === 'revision' ? quizQuestions[currentQuizQuestionIndex] : null);
 
     if (!exercise) return;
 
-    const expected = exercise.expectedOutput.trim();
-    const actual = output.join('\n').trim();
+    setIsAiLoading(true);
+    setAiFeedback(null);
 
-    if (actual === expected || actual.includes(expected)) {
-      setIsCorrect(true);
-    } else {
-      setIsCorrect(false);
+    try {
+      const response = await fetch('/api/analyze-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          question: exercise.question,
+          output: output.join('\n'),
+          expectedOutput: exercise.expectedOutput
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.correct !== undefined) {
+        setIsCorrect(data.correct);
+        if (data.feedback) {
+          setAiFeedback(data.feedback + (data.suggestion ? '\n\n💡 ' + data.suggestion : ''));
+        }
+      } else {
+        // Fallback to simple comparison if AI fails
+        const expected = exercise.expectedOutput.trim();
+        const actual = output.join('\n').trim();
+        setIsCorrect(actual === expected || actual.includes(expected));
+      }
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Fallback to simple comparison
+      const expected = exercise.expectedOutput.trim();
+      const actual = output.join('\n').trim();
+      setIsCorrect(actual === expected || actual.includes(expected));
+    } finally {
+      setIsAiLoading(false);
     }
   };
 
@@ -236,9 +265,33 @@ export default function Home() {
     if (!quizQuestions[currentQuizQuestionIndex]) return;
 
     const exercise = quizQuestions[currentQuizQuestionIndex];
-    const expected = exercise.expectedOutput.trim();
-    const actual = output.join('\n').trim();
-    const isCorrect = actual === expected || actual.includes(expected);
+
+    setIsAiLoading(true);
+    let isCorrect = false;
+
+    try {
+      const response = await fetch('/api/analyze-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          question: exercise.question,
+          output: output.join('\n'),
+          expectedOutput: exercise.expectedOutput
+        })
+      });
+
+      const data = await response.json();
+      isCorrect = data.correct !== undefined ? data.correct : false;
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Fallback to simple comparison
+      const expected = exercise.expectedOutput.trim();
+      const actual = output.join('\n').trim();
+      isCorrect = actual === expected || actual.includes(expected);
+    } finally {
+      setIsAiLoading(false);
+    }
 
     setQuizResults(prev => [...prev, {
       questionId: exercise.id,

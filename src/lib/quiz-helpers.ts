@@ -13,11 +13,11 @@ export function getRevisionQuestions(chapterId: string, difficulty: 'easy' | 'me
     const shuffle = (array: Exercise[]) => array.sort(() => 0.5 - Math.random());
 
     if (difficulty === 'mixed') {
-        // Select 2 easy, 2 medium, 1 hard
+        // Select 2 easy, 2 medium, 1 hard = 5 total
         const easy = shuffle(exercises.filter(e => e.level === 'easy')).slice(0, 2);
         const medium = shuffle(exercises.filter(e => e.level === 'medium')).slice(0, 2);
         const hard = shuffle(exercises.filter(e => e.level === 'hard')).slice(0, 1);
-        return [...easy, ...medium, ...hard];
+        return shuffle([...easy, ...medium, ...hard]);
     } else {
         return shuffle(exercises.filter(e => e.level === difficulty)).slice(0, 5);
     }

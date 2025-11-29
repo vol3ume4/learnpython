@@ -26,7 +26,7 @@ export default function Home() {
   const [quizDifficulty, setQuizDifficulty] = useState<'easy' | 'medium' | 'hard' | 'mixed'>('mixed');
   const [quizQuestions, setQuizQuestions] = useState<Exercise[]>([]);
   const [currentQuizQuestionIndex, setCurrentQuizQuestionIndex] = useState(0);
-  const [quizResults, setQuizResults] = useState<{ questionId: string, correct: boolean, skipped: boolean, feedback?: string }[]>([]);
+  const [quizResults, setQuizResults] = useState<{ questionId: string, correct: boolean, skipped: boolean, feedback?: string, suggestion?: string, question?: string, userCode?: string, userOutput?: string }[]>([]);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showTOC, setShowTOC] = useState(false);
   const router = useRouter();
@@ -314,6 +314,7 @@ export default function Home() {
       const data = await response.json();
       isCorrect = data.correct !== undefined ? data.correct : false;
       feedback = data.feedback || "";
+      const suggestion = data.suggestion || "";
     } catch (error) {
       console.error('AI evaluation failed:', error);
       // Fallback to simple comparison
@@ -328,7 +329,11 @@ export default function Home() {
       questionId: exercise.id,
       correct: isCorrect,
       skipped: false,
-      feedback: feedback
+      feedback: feedback,
+      suggestion: suggestion || "",
+      question: exercise.question,
+      userCode: code,
+      userOutput: output.join('\n')
     }]);
 
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
@@ -515,9 +520,20 @@ export default function Home() {
                       {quizStage === 'quiz' && (
                         <button
                           onClick={handleSubmitQuiz}
-                          className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                          disabled={isAiLoading}
+                          className={clsx(
+                            "px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20",
+                            isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500 text-white"
+                          )}
                         >
-                          Submit Answer <ChevronRight className="w-4 h-4" />
+                          {isAiLoading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Evaluating...
+                            </>
+                          ) : (
+                            <>Submit Answer <ChevronRight className="w-4 h-4" /></>
+                          )}
                         </button>
                       )}
                     </div>
@@ -598,52 +614,98 @@ export default function Home() {
               )}
 
               {quizStage === 'quiz_snapshot' && (
-                <div className="max-w-2xl mx-auto p-8 text-center">
-                  <div className="mb-8">
+                <div className="max-w-3xl mx-auto p-8">
+                  <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
                       <span className="text-5xl font-bold text-white">
                         {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
                       </span>
                     </div>
                     <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
-                    <p className="text-slate-400 text-lg">
-                      You scored {quizResults.filter(r => r.correct).length} out of {quizQuestions.length}
-                    </p>
+                    {(() => {
+                      const score = quizResults.filter(r => r.correct).length;
+                      const total = quizQuestions.length;
+                      const percentage = (score / total) * 100;
+
+                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python master! 🌟</p>;
+                      if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
+                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
+                      if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;
+                      return <p className="text-xl text-slate-400">Keep learning! Every attempt makes you stronger! 🚀</p>;
+                    })()}
                   </div>
 
-                  <div className="space-y-3 mb-8 text-left">
+                  <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
                       const result = quizResults.find(r => r.questionId === q.id);
+                      const [expanded, setExpanded] = React.useState(false);
+
                       return (
-                        <div key={q.id} className="p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-start gap-3">
-                              <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
-                              <div>
-                                <p className="text-slate-300 font-medium mb-1">{q.question}</p>
-                                {result?.feedback && (
-                                  <p className="text-sm text-slate-400 italic border-l-2 border-slate-700 pl-2 mt-1">
-                                    AI: {result.feedback}
-                                  </p>
+                        <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                          <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
+                                <div className="flex-1">
+                                  <p className="text-slate-300 font-medium">{q.question}</p>
+                                  {result?.feedback && !expanded && (
+                                    <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
+                                      AI: {result.feedback}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result?.correct ? (
+                                  <CheckCircle className="w-5 h-5 text-green-400" />
+                                ) : result?.skipped ? (
+                                  <MinusCircle className="w-5 h-5 text-slate-500" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-400" />
                                 )}
+                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", expanded && "rotate-90")} />
                               </div>
                             </div>
-                            <div className="flex-shrink-0 ml-4">
-                              {result?.correct ? (
-                                <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
-                                  <CheckCircle className="w-5 h-5" />
-                                </span>
-                              ) : result?.skipped ? (
-                                <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                                  <MinusCircle className="w-5 h-5" />
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
-                                  <XCircle className="w-5 h-5" />
-                                </span>
+                          </button>
+
+                          {expanded && (
+                            <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
+                              {result?.userCode && (
+                                <div>
+                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                    <code>{result.userCode}</code>
+                                  </pre>
+                                </div>
+                              )}
+
+                              {result?.userOutput && (
+                                <div>
+                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                    {result.userOutput}
+                                  </pre>
+                                </div>
+                              )}
+
+                              {result?.feedback && (
+                                <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                  <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                  <p className="text-sm text-blue-200">{result.feedback}</p>
+                                </div>
+                              )}
+
+                              {result?.suggestion && !result.correct && (
+                                <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                  <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                  <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                </div>
                               )}
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}

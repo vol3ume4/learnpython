@@ -36,12 +36,7 @@ export default function DashboardPage() {
             if (settings) {
                 setGuidedMode(settings.guided_mode);
                 // Show modal if it's their first time (guided_mode is false by default)
-                // In a real app, we might track 'has_seen_onboarding' separately
                 if (settings.guided_mode === false) {
-                    // For now, let's show it every time if it's off, or maybe just once. 
-                    // User requirement: "asked to click a msg box which explains... can turn it off"
-                    // Let's show it if it's OFF, assuming they might want to turn it on.
-                    // Or better, check a local storage flag for the session to avoid annoyance.
                     const hasSeen = localStorage.getItem('hasSeenPrivacyModal');
                     if (!hasSeen) {
                         setShowWelcomeModal(true);
@@ -58,18 +53,18 @@ export default function DashboardPage() {
     const toggleGuidedMode = async (newValue: boolean) => {
         try {
             setGuidedMode(newValue);
+
+            // FIX: Use upsert instead of update to handle missing rows
             const { error } = await supabase
                 .from('user_settings')
-                .update({ guided_mode: newValue })
-                .eq('user_id', user.id);
+                .upsert({ user_id: user.id, guided_mode: newValue })
+                .select();
 
             if (error) throw error;
 
-            if (newValue) {
-                // If turning ON, maybe show a success toast or just stay
-            }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating settings:', error);
+            alert(`Failed to save settings: ${error.message}`);
             setGuidedMode(!newValue); // Revert on error
         }
     };
@@ -103,10 +98,11 @@ export default function DashboardPage() {
                     <span className="text-sm text-slate-400">{user?.email}</span>
                     <button
                         onClick={handleSignOut}
-                        className="p-2 hover:bg-[#30363d] rounded-lg transition-colors text-slate-400 hover:text-white"
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-[#30363d] rounded-lg transition-colors text-slate-400 hover:text-white border border-transparent hover:border-[#30363d]"
                         title="Sign Out"
                     >
-                        <LogOut className="w-5 h-5" />
+                        <LogOut className="w-4 h-4" />
+                        <span className="text-sm font-medium">Sign Out</span>
                     </button>
                 </div>
             </header>

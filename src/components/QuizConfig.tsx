@@ -6,9 +6,10 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
 
 interface QuizConfigProps {
     onStart: (difficulty: Difficulty) => void;
+    isLoading?: boolean;
 }
 
-export default function QuizConfig({ onStart }: QuizConfigProps) {
+export default function QuizConfig({ onStart, isLoading = false }: QuizConfigProps) {
     const [difficulty, setDifficulty] = useState<Difficulty>('mixed');
 
     const difficulties: { id: Difficulty; label: string; color: string; desc: string; icon: React.ReactNode }[] = [
@@ -39,11 +40,13 @@ export default function QuizConfig({ onStart }: QuizConfigProps) {
                     <button
                         key={level.id}
                         onClick={() => setDifficulty(level.id)}
+                        disabled={isLoading}
                         className={clsx(
                             "relative p-6 rounded-xl border-2 text-left transition-all duration-200 group hover:scale-[1.02]",
                             difficulty === level.id
                                 ? "bg-[#1f2937] border-blue-500 shadow-lg shadow-blue-500/20"
-                                : "bg-[#0d1117] border-[#30363d] hover:border-slate-500"
+                                : "bg-[#0d1117] border-[#30363d] hover:border-slate-500",
+                            isLoading && "opacity-50 cursor-not-allowed"
                         )}
                     >
                         <div className="flex items-start justify-between mb-2">
@@ -80,10 +83,17 @@ export default function QuizConfig({ onStart }: QuizConfigProps) {
             <div className="text-center pt-8">
                 <button
                     onClick={() => onStart(difficulty)}
-                    className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-200 bg-gradient-to-r from-orange-600 to-red-600 rounded-full hover:from-orange-500 hover:to-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-lg shadow-orange-900/20 hover:shadow-orange-900/40 hover:-translate-y-1"
+                    disabled={isLoading}
+                    className={clsx(
+                        "group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-200 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 shadow-lg",
+                        isLoading
+                            ? "bg-slate-700 cursor-not-allowed opacity-70"
+                            : "bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 shadow-orange-900/20 hover:shadow-orange-900/40 hover:-translate-y-1"
+                    )}
                 >
-                    <span className="mr-2 text-lg">Enter the Hot Seat</span>
-                    <Rocket className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    <span className="mr-2 text-lg">{isLoading ? "Generating Quiz..." : "Enter the Hot Seat"}</span>
+                    {!isLoading && <Rocket className="w-6 h-6 group-hover:translate-x-1 transition-transform" />}
+                    {isLoading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin ml-2" />}
                 </button>
                 <p className="mt-4 text-sm text-slate-500 flex items-center justify-center gap-2">
                     <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>

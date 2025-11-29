@@ -257,12 +257,36 @@ export default function Home() {
     }
   };
 
-  const startMainQuiz = () => {
-    const questions = getQuizQuestions(currentChapter.id);
-    setQuizQuestions(questions);
-    setCurrentQuizQuestionIndex(0);
-    setQuizResults([]);
-    setQuizStage('quiz');
+  const startMainQuiz = async () => {
+    setIsAiLoading(true);
+    try {
+      const response = await fetch('/api/generate-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: currentChapter.description,
+          chapterTitle: currentChapter.title,
+          difficulty: quizDifficulty
+        })
+      });
+
+      const data = await response.json();
+      if (data.exercises && Array.isArray(data.exercises)) {
+        setQuizQuestions(data.exercises);
+      } else {
+        // Fallback to static if format is wrong
+        setQuizQuestions(getQuizQuestions(currentChapter.id));
+      }
+    } catch (error) {
+      console.error("Failed to generate quiz:", error);
+      // Fallback to static
+      setQuizQuestions(getQuizQuestions(currentChapter.id));
+    } finally {
+      setIsAiLoading(false);
+      setCurrentQuizQuestionIndex(0);
+      setQuizResults([]);
+      setQuizStage('quiz');
+    }
   };
 
   const handleSubmitQuiz = async () => {
@@ -443,6 +467,7 @@ export default function Home() {
                     setCurrentQuizQuestionIndex(0);
                     setQuizStage('revision');
                   }}
+                  isLoading={isAiLoading}
                 />
               )}
               {(quizStage === 'revision' || quizStage === 'quiz') && quizQuestions[currentQuizQuestionIndex] && (
@@ -553,9 +578,20 @@ export default function Home() {
                     </button>
                     <button
                       onClick={startMainQuiz}
-                      className="px-8 py-3 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
+                      disabled={isAiLoading}
+                      className={clsx(
+                        "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
+                        isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500"
+                      )}
                     >
-                      Start Main Quiz <ChevronRight className="w-4 h-4" />
+                      {isAiLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>Start Main Quiz <ChevronRight className="w-4 h-4" /></>
+                      )}
                     </button>
                   </div>
                 </div>

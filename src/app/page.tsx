@@ -635,7 +635,7 @@ export default function Home() {
                       const total = quizQuestions.length;
                       const percentage = (score / total) * 100;
 
-                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python master! 🌟</p>;
+                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python Pro! 🌟</p>;
                       if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
                       if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
                       if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;

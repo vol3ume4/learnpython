@@ -747,6 +747,28 @@ export default function Home() {
           {
             currentSection.type === 'exercises' && (
               <div>
+                {/* Difficulty Selector */}
+                <div className="bg-[#0d1117] border-b border-slate-800 p-4 flex items-center gap-3">
+                  <span className="text-sm text-slate-400 font-medium">Difficulty:</span>
+                  {(['easy', 'medium', 'hard'] as DifficultyLevel[]).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => {
+                        setSelectedDifficulty(level);
+                        setCurrentExerciseIndex(0);
+                      }}
+                      className={clsx(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize",
+                        selectedDifficulty === level
+                          ? "bg-blue-600 text-white shadow-lg"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                      )}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+                {/* Exercise Number Buttons */}
                 <div className="bg-[#0d1117] border-b border-slate-800 p-4 sticky top-0 z-10 flex items-center gap-2 overflow-x-auto">
                   {currentExercises.map((_, idx) => (
                     <button
@@ -763,7 +785,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-
+                
                 {currentExercise && (
                   <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
                     <div className="flex items-center justify-between mb-4">

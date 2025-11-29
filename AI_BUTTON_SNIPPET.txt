@@ -1,0 +1,23 @@
+// Simple test: Add this button to your page.tsx manually
+// Place it next to the "Check Answer" button around line 440
+
+{currentSection.type === 'exercises' && (
+  <button
+    onClick={async () => {
+      const response = await fetch('/api/ai-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          type: 'hint',
+          context: { question: currentExercise?.question || "" }
+        })
+      });
+      const data = await response.json();
+      alert(data.text);
+    }}
+    className="px-4 py-2 bg-purple-600 text-white rounded-lg"
+  >
+    ✨ Test AI
+  </button>
+)}

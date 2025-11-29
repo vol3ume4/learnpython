@@ -140,761 +140,782 @@ export default function Home() {
           code,
           question: exercise.question,
           output: output.join('\n'),
-        } catch(error) {
-          console.error('AI evaluation failed:', error);
-          // Fallback to simple comparison
-          const expected = exercise.expectedOutput.trim();
-          const actual = output.join('\n').trim();
-          setIsCorrect(actual === expected || actual.includes(expected));
-        } finally {
-          setIsAiLoading(false);
+          expectedOutput: exercise.expectedOutput
+        })
+      });
+
+      const data = await response.json();
+
+      console.log('=== AI Evaluation Response ===', data);
+
+      if (data.correct !== undefined) {
+        console.log('Setting isCorrect to:', data.correct);
+        setIsCorrect(data.correct);
+        if (data.feedback) {
+          setAiFeedback(data.feedback + (data.suggestion ? '\n\n💡 ' + data.suggestion : ''));
         }
-      };
+      } else {
+        console.warn('No correct field in response, using fallback');
+        // Fallback to simple comparison if AI fails
+        const expected = exercise.expectedOutput.trim();
+        const actual = output.join('\n').trim();
+        setIsCorrect(actual === expected || actual.includes(expected));
+      }
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Fallback to simple comparison
+      const expected = exercise.expectedOutput.trim();
+      const actual = output.join('\n').trim();
+      setIsCorrect(actual === expected || actual.includes(expected));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
-      const nextSection = () => {
-        if (!isLastSection) {
-          setCurrentSectionIndex(prev => prev + 1);
-          setCurrentExerciseIndex(0);
-        } else if (!isLastChapter) {
-          // Move to next chapter
-          setCurrentChapterIndex(prev => prev + 1);
-          setCurrentSectionIndex(0);
-          setCurrentExerciseIndex(0);
-        }
-      };
+  const nextSection = () => {
+    if (!isLastSection) {
+      setCurrentSectionIndex(prev => prev + 1);
+      setCurrentExerciseIndex(0);
+    } else if (!isLastChapter) {
+      // Move to next chapter
+      setCurrentChapterIndex(prev => prev + 1);
+      setCurrentSectionIndex(0);
+      setCurrentExerciseIndex(0);
+    }
+  };
 
-      const prevSection = () => {
-        if (!isFirstSection) {
-          setCurrentSectionIndex(prev => prev - 1);
-          setCurrentExerciseIndex(0);
-        } else if (!isFirstChapter) {
-          // Move to previous chapter's last section
-          setCurrentChapterIndex(prev => prev - 1);
-          const prevChapter = courseData.chapters[currentChapterIndex - 1];
-          setCurrentSectionIndex(prevChapter.sections.length - 1);
-          setCurrentExerciseIndex(0);
-        }
-      };
+  const prevSection = () => {
+    if (!isFirstSection) {
+      setCurrentSectionIndex(prev => prev - 1);
+      setCurrentExerciseIndex(0);
+    } else if (!isFirstChapter) {
+      // Move to previous chapter's last section
+      setCurrentChapterIndex(prev => prev - 1);
+      const prevChapter = courseData.chapters[currentChapterIndex - 1];
+      setCurrentSectionIndex(prevChapter.sections.length - 1);
+      setCurrentExerciseIndex(0);
+    }
+  };
 
-      const nextExercise = () => {
-        if (!isLastExercise) setCurrentExerciseIndex(prev => prev + 1);
-      };
+  const nextExercise = () => {
+    if (!isLastExercise) setCurrentExerciseIndex(prev => prev + 1);
+  };
 
-      const prevExercise = () => {
-        if (!isFirstExercise) setCurrentExerciseIndex(prev => prev - 1);
-      };
+  const prevExercise = () => {
+    if (!isFirstExercise) setCurrentExerciseIndex(prev => prev - 1);
+  };
 
-      const navigateToSection = (chapterIdx: number, sectionIdx: number) => {
-        setCurrentChapterIndex(chapterIdx);
-        setCurrentSectionIndex(sectionIdx);
-        setCurrentExerciseIndex(0);
-        setShowTOC(false);
-      };
+  const navigateToSection = (chapterIdx: number, sectionIdx: number) => {
+    setCurrentChapterIndex(chapterIdx);
+    setCurrentSectionIndex(sectionIdx);
+    setCurrentExerciseIndex(0);
+    setShowTOC(false);
+  };
 
-      const getDifficultyColor = (level: DifficultyLevel) => {
-        switch (level) {
-          case 'easy': return 'text-green-400 bg-green-900/30 border-green-700';
-          case 'medium': return 'text-yellow-400 bg-yellow-900/30 border-yellow-700';
-          case 'hard': return 'text-red-400 bg-red-900/30 border-red-700';
-        }
-      };
+  const getDifficultyColor = (level: DifficultyLevel) => {
+    switch (level) {
+      case 'easy': return 'text-green-400 bg-green-900/30 border-green-700';
+      case 'medium': return 'text-yellow-400 bg-yellow-900/30 border-yellow-700';
+      case 'hard': return 'text-red-400 bg-red-900/30 border-red-700';
+    }
+  };
 
-      const getSectionIcon = (type: string) => {
-        switch (type) {
-          case 'theory': return <BookOpen className="w-4 h-4" />;
-          case 'examples': return <Code2 className="w-4 h-4" />;
-          case 'exercises': return <Trophy className="w-4 h-4" />;
-          default: return null;
-        }
-      };
+  const getSectionIcon = (type: string) => {
+    switch (type) {
+      case 'theory': return <BookOpen className="w-4 h-4" />;
+      case 'examples': return <Code2 className="w-4 h-4" />;
+      case 'exercises': return <Trophy className="w-4 h-4" />;
+      default: return null;
+    }
+  };
 
-      const handleSkipQuizQuestion = () => {
-        setQuizResults(prev => [...prev, {
-          questionId: quizQuestions[currentQuizQuestionIndex].id,
-          correct: false,
-          skipped: true
-        }]);
-        handleNextQuizQuestionLogic();
-      };
+  const handleSkipQuizQuestion = () => {
+    setQuizResults(prev => [...prev, {
+      questionId: quizQuestions[currentQuizQuestionIndex].id,
+      correct: false,
+      skipped: true
+    }]);
+    handleNextQuizQuestionLogic();
+  };
 
-      const handleNextQuizQuestion = () => {
-        setQuizResults(prev => [...prev, {
-          questionId: quizQuestions[currentQuizQuestionIndex].id,
-          correct: true,
-          skipped: false
-        }]);
-        handleNextQuizQuestionLogic();
-      };
+  const handleNextQuizQuestion = () => {
+    setQuizResults(prev => [...prev, {
+      questionId: quizQuestions[currentQuizQuestionIndex].id,
+      correct: true,
+      skipped: false
+    }]);
+    handleNextQuizQuestionLogic();
+  };
 
-      const handleNextQuizQuestionLogic = () => {
-        if (currentQuizQuestionIndex < quizQuestions.length - 1) {
-          setCurrentQuizQuestionIndex(prev => prev + 1);
-          setIsCorrect(null);
-          resetOutput();
-        } else {
-          setQuizStage('revision_snapshot');
-        }
-      };
+  const handleNextQuizQuestionLogic = () => {
+    if (currentQuizQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuizQuestionIndex(prev => prev + 1);
+      setIsCorrect(null);
+      resetOutput();
+    } else {
+      setQuizStage('revision_snapshot');
+    }
+  };
 
-      const startMainQuiz = () => {
-        const questions = getQuizQuestions(currentChapter.id);
-        setQuizQuestions(questions);
-        setCurrentQuizQuestionIndex(0);
-        setQuizResults([]);
-        setQuizStage('quiz');
-      };
+  const startMainQuiz = () => {
+    const questions = getQuizQuestions(currentChapter.id);
+    setQuizQuestions(questions);
+    setCurrentQuizQuestionIndex(0);
+    setQuizResults([]);
+    setQuizStage('quiz');
+  };
 
-      const handleSubmitQuiz = async () => {
-        if (!quizQuestions[currentQuizQuestionIndex]) return;
+  const handleSubmitQuiz = async () => {
+    if (!quizQuestions[currentQuizQuestionIndex]) return;
 
-        const exercise = quizQuestions[currentQuizQuestionIndex];
+    const exercise = quizQuestions[currentQuizQuestionIndex];
 
-        setIsAiLoading(true);
-        let isCorrect = false;
+    setIsAiLoading(true);
+    let isCorrect = false;
 
-        try {
-          const response = await fetch('/api/analyze-answer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              code,
-              question: exercise.question,
-              output: output.join('\n'),
-              expectedOutput: exercise.expectedOutput
-            })
-          });
+    try {
+      const response = await fetch('/api/analyze-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          question: exercise.question,
+          output: output.join('\n'),
+          expectedOutput: exercise.expectedOutput
+        })
+      });
 
-          const data = await response.json();
-          isCorrect = data.correct !== undefined ? data.correct : false;
-        } catch (error) {
-          console.error('AI evaluation failed:', error);
-          // Fallback to simple comparison
-          const expected = exercise.expectedOutput.trim();
-          const actual = output.join('\n').trim();
-          isCorrect = actual === expected || actual.includes(expected);
-        } finally {
-          setIsAiLoading(false);
-        }
+      const data = await response.json();
+      isCorrect = data.correct !== undefined ? data.correct : false;
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Fallback to simple comparison
+      const expected = exercise.expectedOutput.trim();
+      const actual = output.join('\n').trim();
+      isCorrect = actual === expected || actual.includes(expected);
+    } finally {
+      setIsAiLoading(false);
+    }
 
-        setQuizResults(prev => [...prev, {
-          questionId: exercise.id,
-          correct: isCorrect,
-          skipped: false
-        }]);
+    setQuizResults(prev => [...prev, {
+      questionId: exercise.id,
+      correct: isCorrect,
+      skipped: false
+    }]);
 
-        if (currentQuizQuestionIndex < quizQuestions.length - 1) {
-          setCurrentQuizQuestionIndex(prev => prev + 1);
-          setIsCorrect(null);
-          resetOutput();
-        } else {
-          setQuizStage('quiz_snapshot');
-        }
-      };
+    if (currentQuizQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuizQuestionIndex(prev => prev + 1);
+      setIsCorrect(null);
+      resetOutput();
+    } else {
+      setQuizStage('quiz_snapshot');
+    }
+  };
 
-      return (
-        <main className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
-          {/* Table of Contents Sidebar */}
-          <div className={clsx(
-            "fixed inset-y-0 left-0 z-50 w-80 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out overflow-y-auto",
-            showTOC ? "translate-x-0" : "-translate-x-full"
-          )}>
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900 z-10">
-              <h2 className="text-xl font-bold text-white">Table of Contents</h2>
-              <button
-                onClick={() => setShowTOC(false)}
-                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+  return (
+    <main className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      {/* Table of Contents Sidebar */}
+      <div className={clsx(
+        "fixed inset-y-0 left-0 z-50 w-80 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out overflow-y-auto",
+        showTOC ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900 z-10">
+          <h2 className="text-xl font-bold text-white">Table of Contents</h2>
+          <button
+            onClick={() => setShowTOC(false)}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {courseData.chapters.map((chapter, chapterIdx) => (
+            <div key={chapter.id} className="space-y-2">
+              <div className="font-semibold text-blue-400 text-sm uppercase tracking-wider">
+                Chapter {chapterIdx + 1}: {chapter.title}
+              </div>
+              <div className="space-y-1 ml-2">
+                {chapter.sections.map((section, sectionIdx) => (
+                  <button
+                    key={section.id}
+                    onClick={() => navigateToSection(chapterIdx, sectionIdx)}
+                    className={clsx(
+                      "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
+                      chapterIdx === currentChapterIndex && sectionIdx === currentSectionIndex
+                        ? "bg-blue-600 text-white font-medium"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    )}
+                  >
+                    {getSectionIcon(section.type)}
+                    <span className="flex-1">{section.title}</span>
+                    {section.type === 'exercises' && (
+                      <span className="text-xs opacity-70">15</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="p-4 space-y-4">
-              {courseData.chapters.map((chapter, chapterIdx) => (
-                <div key={chapter.id} className="space-y-2">
-                  <div className="font-semibold text-blue-400 text-sm uppercase tracking-wider">
-                    Chapter {chapterIdx + 1}: {chapter.title}
+      {/* Overlay */}
+      {showTOC && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setShowTOC(false)}
+        />
+      )}
+
+      {/* Left Panel: Content */}
+      <div className="w-1/2 flex flex-col border-r border-slate-800">
+        {/* Header */}
+        <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowTOC(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                title="Table of Contents"
+              >
+                <Menu className="w-5 h-5 text-slate-400" />
+              </button>
+              <div className="flex items-center gap-2 text-sm text-blue-400 font-medium">
+                <span>{courseData.title}</span>
+                <span>/</span>
+                <span>{currentChapter.title}</span>
+              </div>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 ml-14">
+            {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}
+            {currentSection.type === 'examples' && <Code2 className="w-8 h-8 text-purple-400" />}
+            {currentSection.type === 'exercises' && <Trophy className="w-8 h-8 text-yellow-400" />}
+            {currentSection.type === 'quiz' && <Zap className="w-8 h-8 text-orange-400" />}
+            {currentSection.title}
+          </h1>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8">
+          {/* Theory Section */}
+          {currentSection.type === 'theory' && (
+            <div className="prose prose-invert max-w-none">
+              <div className="text-lg leading-relaxed text-slate-300 whitespace-pre-wrap">
+                {currentSection.content}
+              </div>
+            </div>
+          )}
+
+          {/* Examples Section */}
+          {currentSection.type === 'examples' && currentSection.examples && (
+            <div className="space-y-6">
+              {currentSection.examples.map((example, idx) => (
+                <div key={idx} className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                  <div className="p-4 bg-slate-800/50 border-b border-slate-700">
+                    <h3 className="text-lg font-semibold text-white">Example {idx + 1}</h3>
                   </div>
-                  <div className="space-y-1 ml-2">
-                    {chapter.sections.map((section, sectionIdx) => (
-                      <button
-                        key={section.id}
-                        onClick={() => navigateToSection(chapterIdx, sectionIdx)}
-                        className={clsx(
-                          "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
-                          chapterIdx === currentChapterIndex && sectionIdx === currentSectionIndex
-                            ? "bg-blue-600 text-white font-medium"
-                            : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                        )}
-                      >
-                        {getSectionIcon(section.type)}
-                        <span className="flex-1">{section.title}</span>
-                        {section.type === 'exercises' && (
-                          <span className="text-xs opacity-70">15</span>
-                        )}
-                      </button>
-                    ))}
+                  <div className="p-6">
+                    <pre className="bg-slate-950 p-4 rounded-lg mb-4 overflow-x-auto">
+                      <code className="text-sm text-slate-300">{example.code}</code>
+                    </pre>
+                    <p className="text-slate-400 leading-relaxed">{example.explanation}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Overlay */}
-          {showTOC && (
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setShowTOC(false)}
-            />
           )}
 
-          {/* Left Panel: Content */}
-          <div className="w-1/2 flex flex-col border-r border-slate-800">
-            {/* Header */}
-            <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowTOC(true)}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                    title="Table of Contents"
-                  >
-                    <Menu className="w-5 h-5 text-slate-400" />
-                  </button>
-                  <div className="flex items-center gap-2 text-sm text-blue-400 font-medium">
-                    <span>{courseData.title}</span>
-                    <span>/</span>
-                    <span>{currentChapter.title}</span>
+          {/* Quiz Section */}
+          {currentSection.type === 'quiz' && (
+            <div className="h-full">
+              {quizStage === 'config' && (
+                <QuizConfig
+                  onStart={(difficulty) => {
+                    setQuizDifficulty(difficulty);
+                    const questions = getRevisionQuestions(currentChapter.id, difficulty);
+                    setQuizQuestions(questions);
+                    setCurrentQuizQuestionIndex(0);
+                    setQuizStage('revision');
+                  }}
+                />
+              )}
+              {(quizStage === 'revision' || quizStage === 'quiz') && quizQuestions[currentQuizQuestionIndex] && (
+                <div className="max-w-4xl mx-auto p-6 space-y-6">
+                  <div className="flex items-center justify-between text-sm text-slate-400 mb-4">
+                    <span>Question {currentQuizQuestionIndex + 1} of {quizQuestions.length}</span>
+                    <span className="flex items-center gap-2 text-blue-400 font-medium">
+                      <Zap className="w-4 h-4" /> {quizStage === 'revision' ? 'Revision Mode' : 'Quiz Mode'}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-white">
+                        Question {currentQuizQuestionIndex + 1}
+                      </h3>
+                      <span className={clsx(
+                        "px-3 py-1 rounded-full text-xs font-bold border",
+                        getDifficultyColor(quizQuestions[currentQuizQuestionIndex].level)
+                      )}>
+                        {quizQuestions[currentQuizQuestionIndex].level.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="mb-6 text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">
+                      {quizQuestions[currentQuizQuestionIndex].question}
+                    </p>
+
+                    <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-800">
+                      <button
+                        onClick={handleSkipQuizQuestion}
+                        className="text-slate-400 hover:text-white px-4 py-2 rounded hover:bg-slate-800 transition-colors"
+                      >
+                        Skip Question
+                      </button>
+
+                      {quizStage === 'revision' && isCorrect === true && (
+                        <button
+                          onClick={handleNextQuizQuestion}
+                          className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 animate-bounce shadow-lg shadow-green-900/20"
+                        >
+                          Next Question <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {quizStage === 'quiz' && (
+                        <button
+                          onClick={handleSubmitQuiz}
+                          className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                        >
+                          Submit Answer <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 ml-14">
-                {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}
-                {currentSection.type === 'examples' && <Code2 className="w-8 h-8 text-purple-400" />}
-                {currentSection.type === 'exercises' && <Trophy className="w-8 h-8 text-yellow-400" />}
-                {currentSection.type === 'quiz' && <Zap className="w-8 h-8 text-orange-400" />}
-                {currentSection.title}
-              </h1>
-            </header>
+              )}
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-8">
-              {/* Theory Section */}
-              {currentSection.type === 'theory' && (
-                <div className="prose prose-invert max-w-none">
-                  <div className="text-lg leading-relaxed text-slate-300 whitespace-pre-wrap">
-                    {currentSection.content}
+              {quizStage === 'revision_snapshot' && (
+                <div className="max-w-2xl mx-auto p-8 text-center">
+                  <div className="mb-8">
+                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
+                      <span className="text-4xl font-bold text-white">
+                        {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Revision Complete!</h2>
+                    <p className="text-slate-400">Here's how you did:</p>
                   </div>
-                </div>
-              )}
 
-              {/* Examples Section */}
-              {currentSection.type === 'examples' && currentSection.examples && (
-                <div className="space-y-6">
-                  {currentSection.examples.map((example, idx) => (
-                    <div key={idx} className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                      <div className="p-4 bg-slate-800/50 border-b border-slate-700">
-                        <h3 className="text-lg font-semibold text-white">Example {idx + 1}</h3>
-                      </div>
-                      <div className="p-6">
-                        <pre className="bg-slate-950 p-4 rounded-lg mb-4 overflow-x-auto">
-                          <code className="text-sm text-slate-300">{example.code}</code>
-                        </pre>
-                        <p className="text-slate-400 leading-relaxed">{example.explanation}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Quiz Section */}
-              {currentSection.type === 'quiz' && (
-                <div className="h-full">
-                  {quizStage === 'config' && (
-                    <QuizConfig
-                      onStart={(difficulty) => {
-                        setQuizDifficulty(difficulty);
-                        const questions = getRevisionQuestions(currentChapter.id, difficulty);
-                        setQuizQuestions(questions);
-                        setCurrentQuizQuestionIndex(0);
-                        setQuizStage('revision');
-                      }}
-                    />
-                  )}
-                  {(quizStage === 'revision' || quizStage === 'quiz') && quizQuestions[currentQuizQuestionIndex] && (
-                    <div className="max-w-4xl mx-auto p-6 space-y-6">
-                      <div className="flex items-center justify-between text-sm text-slate-400 mb-4">
-                        <span>Question {currentQuizQuestionIndex + 1} of {quizQuestions.length}</span>
-                        <span className="flex items-center gap-2 text-blue-400 font-medium">
-                          <Zap className="w-4 h-4" /> {quizStage === 'revision' ? 'Revision Mode' : 'Quiz Mode'}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-xl">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-semibold text-white">
-                            Question {currentQuizQuestionIndex + 1}
-                          </h3>
-                          <span className={clsx(
-                            "px-3 py-1 rounded-full text-xs font-bold border",
-                            getDifficultyColor(quizQuestions[currentQuizQuestionIndex].level)
-                          )}>
-                            {quizQuestions[currentQuizQuestionIndex].level.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="mb-6 text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">
-                          {quizQuestions[currentQuizQuestionIndex].question}
-                        </p>
-
-                        <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-800">
-                          <button
-                            onClick={handleSkipQuizQuestion}
-                            className="text-slate-400 hover:text-white px-4 py-2 rounded hover:bg-slate-800 transition-colors"
-                          >
-                            Skip Question
-                          </button>
-
-                          {quizStage === 'revision' && isCorrect === true && (
-                            <button
-                              onClick={handleNextQuizQuestion}
-                              className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 animate-bounce shadow-lg shadow-green-900/20"
-                            >
-                              Next Question <ChevronRight className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {quizStage === 'quiz' && (
-                            <button
-                              onClick={handleSubmitQuiz}
-                              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20"
-                            >
-                              Submit Answer <ChevronRight className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {quizStage === 'revision_snapshot' && (
-                    <div className="max-w-2xl mx-auto p-8 text-center">
-                      <div className="mb-8">
-                        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
-                          <span className="text-4xl font-bold text-white">
-                            {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
-                          </span>
-                        </div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Revision Complete!</h2>
-                        <p className="text-slate-400">Here's how you did:</p>
-                      </div>
-
-                      <div className="space-y-3 mb-8 text-left">
-                        {quizQuestions.map((q, idx) => {
-                          const result = quizResults.find(r => r.questionId === q.id);
-                          return (
-                            <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-500 font-mono text-sm">0{idx + 1}</span>
-                                <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
-                              </div>
-                              <div>
-                                {result?.correct ? (
-                                  <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
-                                    <CheckCircle className="w-4 h-4" /> Correct
-                                  </span>
-                                ) : result?.skipped ? (
-                                  <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                                    <MinusCircle className="w-4 h-4" /> Skipped
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
-                                    <XCircle className="w-4 h-4" /> Incorrect
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="flex justify-center gap-4">
-                        <button
-                          onClick={() => {
-                            setQuizStage('config');
-                            setQuizResults([]);
-                          }}
-                          className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                        >
-                          Retry Revision
-                        </button>
-                        <button
-                          onClick={startMainQuiz}
-                          className="px-8 py-3 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
-                        >
-                          Start Main Quiz <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {quizStage === 'quiz_snapshot' && (
-                    <div className="max-w-2xl mx-auto p-8 text-center">
-                      <div className="mb-8">
-                        <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
-                          <span className="text-5xl font-bold text-white">
-                            {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
-                          </span>
-                        </div>
-                        <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
-                        <p className="text-slate-400 text-lg">
-                          You scored {quizResults.filter(r => r.correct).length} out of {quizQuestions.length}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3 mb-8 text-left">
-                        {quizQuestions.map((q, idx) => {
-                          const result = quizResults.find(r => r.questionId === q.id);
-                          return (
-                            <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-500 font-mono text-sm font-bold">Q{idx + 1}</span>
-                                <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
-                              </div>
-                              <div>
-                                {result?.correct ? (
-                                  <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
-                                    <CheckCircle className="w-4 h-4" /> Correct
-                                  </span>
-                                ) : result?.skipped ? (
-                                  <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                                    <MinusCircle className="w-4 h-4" /> Skipped
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
-                                    <XCircle className="w-4 h-4" /> Incorrect
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="flex justify-center gap-4">
-                        <button
-                          onClick={() => {
-                            setQuizStage('config');
-                            setQuizResults([]);
-                          }}
-                          className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
-                        >
-                          Retry Quiz
-                        </button>
-                        <button
-                          onClick={() => {
-                            // Navigate to next section or chapter
-                            if (!isLastSection) {
-                              setCurrentSectionIndex(prev => prev + 1);
-                            } else if (!isLastChapter) {
-                              setCurrentChapterIndex(prev => prev + 1);
-                              setCurrentSectionIndex(0);
-                            }
-                            setQuizStage('config');
-                            setQuizResults([]);
-                          }}
-                          className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
-                        >
-                          Continue Learning <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Exercises Section */}
-              {
-                currentSection.type === 'exercises' && (
-                  <div>
-                    <div className="bg-[#0d1117] border-b border-slate-800 p-4 sticky top-0 z-10 flex items-center gap-2 overflow-x-auto">
-                      {currentExercises.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentExerciseIndex(idx)}
-                          className={clsx(
-                            "w-8 h-8 rounded-lg text-sm font-medium transition-all flex-shrink-0",
-                            idx === currentExerciseIndex
-                              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
-                              : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
-                          )}
-                        >
-                          {idx + 1}
-                        </button>
-                      ))}
-                    </div>
-
-                    {currentExercise && (
-                      <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-semibold text-white">
-                            Exercise {currentExerciseIndex + 1} of {currentExercises.length}
-                          </h3>
-                          <span className={clsx(
-                            "px-3 py-1 rounded-full text-xs font-bold border",
-                            getDifficultyColor(selectedDifficulty)
-                          )}>
-                            {selectedDifficulty.toUpperCase()}
-                          </span>
-                        </div>
-
-                        <p className="mb-6 text-slate-300 text-lg leading-relaxed">
-                          {currentExercise.question}
-                        </p>
-
-                        {showHint && (
-                          <div className="mb-4 p-4 bg-blue-950/30 border border-blue-900/50 rounded-lg text-blue-200 flex items-start gap-3">
-                            <Lightbulb className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                            <p>{currentExercise.hint}</p>
+                  <div className="space-y-3 mb-8 text-left">
+                    {quizQuestions.map((q, idx) => {
+                      const result = quizResults.find(r => r.questionId === q.id);
+                      return (
+                        <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
+                          <div className="flex items-center gap-3">
+                            <span className="text-slate-500 font-mono text-sm">0{idx + 1}</span>
+                            <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
                           </div>
-                        )}
-
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => setShowHint(!showHint)}
-                            className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
-                          >
-                            <Lightbulb className="w-4 h-4" />
-                            {showHint ? "Hide Hint" : "Show Hint"}
-                          </button>
-                          <button
-                            onClick={() => setCode(currentExercise.solution)}
-                            className="text-sm text-slate-400 hover:text-white transition-colors ml-auto"
-                          >
-                            Show Solution
-                          </button>
-                        </div>
-
-                        {/* Exercise Navigation */}
-                        {currentExercises.length > 1 && (
-                          <div className="mt-6 pt-6 border-t border-slate-700 flex justify-between items-center">
-                            <button
-                              onClick={prevExercise}
-                              disabled={isFirstExercise}
-                              className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                              ← Previous Exercise
-                            </button>
-                            <button
-                              onClick={nextExercise}
-                              disabled={isLastExercise}
-                              className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                              Next Exercise →
-                            </button>
+                          <div>
+                            {result?.correct ? (
+                              <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
+                                <CheckCircle className="w-4 h-4" /> Correct
+                              </span>
+                            ) : result?.skipped ? (
+                              <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
+                                <MinusCircle className="w-4 h-4" /> Skipped
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
+                                <XCircle className="w-4 h-4" /> Incorrect
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )
-              }
-            </div >
 
-            {/* Navigation Footer */}
-            < div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center" >
-              <button
-                onClick={prevSection}
-                disabled={isFirstSection && isFirstChapter}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronLeft className="w-5 h-5" />
-                Previous
-              </button>
-
-              <div className="flex gap-2">
-                {currentChapter.sections.map((section, idx) => (
-                  <div
-                    key={idx}
-                    className={clsx(
-                      "w-2 h-2 rounded-full transition-all",
-                      idx === currentSectionIndex ? "bg-blue-500 w-4" : "bg-slate-700"
-                    )}
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={nextSection}
-                disabled={isLastSection && isLastChapter}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-blue-900/20"
-              >
-                Next
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div >
-          </div >
-
-          {/* Right Panel: Editor & Terminal */}
-          {
-            (currentSection.type !== 'quiz' || (quizStage !== 'config' && quizStage !== 'revision_snapshot' && quizStage !== 'quiz_snapshot')) && (
-              <div className="w-1/2 flex flex-col bg-[#1e1e1e]">
-                {/* Editor Toolbar */}
-                <div className="h-12 flex items-center justify-between px-4 bg-[#252526] border-b border-[#333]">
-                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">main.py</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex justify-center gap-4">
                     <button
                       onClick={() => {
-                        if (currentSection.type === 'exercises' && currentExercise) {
-                          setCode(currentExercise.starterCode);
-                        } else if (currentSection.type === 'examples' && currentSection.examples?.[0]) {
-                          setCode(currentSection.examples[0].code);
-                        } else if (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex]) {
-                          setCode(quizQuestions[currentQuizQuestionIndex].starterCode);
-                        }
+                        setQuizStage('config');
+                        setQuizResults([]);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
-                      title="Reset Code"
+                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
                     >
-                      <RotateCcw className="w-4 h-4" />
+                      Retry Revision
                     </button>
-                  </div>
-                </div>
-
-                {/* Monaco Editor */}
-                <div className="flex-1 relative">
-                  <Editor
-                    height="100%"
-                    defaultLanguage="python"
-                    theme="vs-dark"
-                    value={code}
-                    onChange={(value) => setCode(value || "")}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 16,
-                      padding: { top: 20 },
-                      scrollBeyondLastLine: false,
-                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    }}
-                  />
-                </div>
-
-                {/* Action Bar */}
-                <div className="h-16 bg-[#252526] border-t border-[#333] flex items-center justify-between px-6">
-                  <div className="flex items-center gap-2">
-                    {!isReady ? (
-                      <span className="text-yellow-500 text-sm flex items-center gap-2">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                        Loading Python Environment...
-                      </span>
-                    ) : (
-                      <span className="text-green-500 text-sm flex items-center gap-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full" />
-                        Ready
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-3">
                     <button
-                      onClick={handleRun}
-                      disabled={!isReady || isRunning}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-900/20"
+                      onClick={startMainQuiz}
+                      className="px-8 py-3 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
                     >
-                      {isRunning ? (
-                        <span className="animate-spin">⟳</span>
-                      ) : (
-                        <Play className="w-4 h-4 fill-current" />
-                      )}
-                      Run Code
+                      Start Main Quiz <ChevronRight className="w-4 h-4" />
                     </button>
-
-                    {((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
-                      <button
-                        onClick={handleCheck}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600"
-                      >
-                        Check Answer
-                      </button>
-                    )}
-
-                    {/* AI Help Buttons */}
-                    {output.some(line => line.includes("Error")) && (
-                      <button
-                        onClick={() => askAI('explain_error')}
-                        disabled={isAiLoading}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all disabled:opacity-50"
-                      >
-                        {isAiLoading ? "Thinking..." : "Explain Error"}
-                      </button>
-                    )}
-
-                    {(currentSection.type === 'exercises' || quizStage === 'revision') && (
-                      <button
-                        onClick={() => askAI('hint')}
-                        disabled={isAiLoading}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-900/30 text-purple-400 border border-purple-800 hover:bg-purple-900/50 transition-all disabled:opacity-50"
-                      >
-                        {isAiLoading ? "Thinking..." : "✨ AI Hint"}
-                      </button>
-                    )}
                   </div>
                 </div>
+              )}
 
-                {/* Terminal Output */}
-                <div className="h-1/3 bg-[#1e1e1e] border-t border-[#333] flex flex-col">
-                  <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
-                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Terminal</span>
-                    {isCorrect !== null && (
-                      <span className={clsx(
-                        "text-xs font-bold px-2 py-1 rounded flex items-center gap-1",
-                        isCorrect ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"
-                      )}>
-                        {isCorrect ? <><CheckCircle className="w-3 h-3" /> CORRECT!</> : <><XCircle className="w-3 h-3" /> TRY AGAIN</>}
+              {quizStage === 'quiz_snapshot' && (
+                <div className="max-w-2xl mx-auto p-8 text-center">
+                  <div className="mb-8">
+                    <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
+                      <span className="text-5xl font-bold text-white">
+                        {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
                       </span>
-                    )}
+                    </div>
+                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
+                    <p className="text-slate-400 text-lg">
+                      You scored {quizResults.filter(r => r.correct).length} out of {quizQuestions.length}
+                    </p>
                   </div>
-                  <div className="flex-1 p-4 font-mono text-sm overflow-y-auto">
-                    {output.length === 0 ? (
-                      <span className="text-slate-600 italic">Output will appear here...</span>
-                    ) : (
-                      output.map((line, i) => (
-                        <div key={i} className="text-slate-300 mb-1">{line}</div>
-                      ))
-                    )}
 
-                    {/* AI Feedback Display */}
-                    {aiFeedback && (
-                      <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg animate-in fade-in slide-in-from-bottom-2">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
-                            ✨ AI Tutor
-                          </h4>
-                          <button onClick={() => setAiFeedback(null)} className="text-slate-500 hover:text-white">
-                            <X className="w-4 h-4" />
-                          </button>
+                  <div className="space-y-3 mb-8 text-left">
+                    {quizQuestions.map((q, idx) => {
+                      const result = quizResults.find(r => r.questionId === q.id);
+                      return (
+                        <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <span className="text-slate-500 font-mono text-sm font-bold">Q{idx + 1}</span>
+                            <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
+                          </div>
+                          <div>
+                            {result?.correct ? (
+                              <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
+                                <CheckCircle className="w-4 h-4" /> Correct
+                              </span>
+                            ) : result?.skipped ? (
+                              <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
+                                <MinusCircle className="w-4 h-4" /> Skipped
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
+                                <XCircle className="w-4 h-4" /> Incorrect
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiFeedback}</p>
-                      </div>
-                    )}
+                      );
+                    })}
+                  </div>
 
-                    {isCorrect === true && (
-                      <div className="mt-4 text-green-400 font-bold flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5" />
-                        Perfect! Try the next exercise or move to the next section.
-                      </div>
-                    )}
-                    {isCorrect === false && (
-                      <div className="mt-4 text-red-400 font-bold flex items-center gap-2">
-                        <XCircle className="w-5 h-5" />
-                        Not quite. Check the hint or try again!
-                      </div>
-                    )}
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => {
+                        setQuizStage('config');
+                        setQuizResults([]);
+                      }}
+                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
+                    >
+                      Retry Quiz
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Navigate to next section or chapter
+                        if (!isLastSection) {
+                          setCurrentSectionIndex(prev => prev + 1);
+                        } else if (!isLastChapter) {
+                          setCurrentChapterIndex(prev => prev + 1);
+                          setCurrentSectionIndex(0);
+                        }
+                        setQuizStage('config');
+                        setQuizResults([]);
+                      }}
+                      className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
+                    >
+                      Continue Learning <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Exercises Section */}
+          {
+            currentSection.type === 'exercises' && (
+              <div>
+                <div className="bg-[#0d1117] border-b border-slate-800 p-4 sticky top-0 z-10 flex items-center gap-2 overflow-x-auto">
+                  {currentExercises.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentExerciseIndex(idx)}
+                      className={clsx(
+                        "w-8 h-8 rounded-lg text-sm font-medium transition-all flex-shrink-0",
+                        idx === currentExerciseIndex
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                      )}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                {currentExercise && (
+                  <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-white">
+                        Exercise {currentExerciseIndex + 1} of {currentExercises.length}
+                      </h3>
+                      <span className={clsx(
+                        "px-3 py-1 rounded-full text-xs font-bold border",
+                        getDifficultyColor(selectedDifficulty)
+                      )}>
+                        {selectedDifficulty.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <p className="mb-6 text-slate-300 text-lg leading-relaxed">
+                      {currentExercise.question}
+                    </p>
+
+                    {showHint && (
+                      <div className="mb-4 p-4 bg-blue-950/30 border border-blue-900/50 rounded-lg text-blue-200 flex items-start gap-3">
+                        <Lightbulb className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <p>{currentExercise.hint}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowHint(!showHint)}
+                        className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+                      >
+                        <Lightbulb className="w-4 h-4" />
+                        {showHint ? "Hide Hint" : "Show Hint"}
+                      </button>
+                      <button
+                        onClick={() => setCode(currentExercise.solution)}
+                        className="text-sm text-slate-400 hover:text-white transition-colors ml-auto"
+                      >
+                        Show Solution
+                      </button>
+                    </div>
+
+                    {/* Exercise Navigation */}
+                    {currentExercises.length > 1 && (
+                      <div className="mt-6 pt-6 border-t border-slate-700 flex justify-between items-center">
+                        <button
+                          onClick={prevExercise}
+                          disabled={isFirstExercise}
+                          className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          ← Previous Exercise
+                        </button>
+                        <button
+                          onClick={nextExercise}
+                          disabled={isLastExercise}
+                          className="text-sm text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Next Exercise →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )
           }
-        </main >
-      );
-    }
+        </div >
+
+        {/* Navigation Footer */}
+        < div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center" >
+          <button
+            onClick={prevSection}
+            disabled={isFirstSection && isFirstChapter}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Previous
+          </button>
+
+          <div className="flex gap-2">
+            {currentChapter.sections.map((section, idx) => (
+              <div
+                key={idx}
+                className={clsx(
+                  "w-2 h-2 rounded-full transition-all",
+                  idx === currentSectionIndex ? "bg-blue-500 w-4" : "bg-slate-700"
+                )}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={nextSection}
+            disabled={isLastSection && isLastChapter}
+            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-blue-900/20"
+          >
+            Next
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div >
+      </div >
+
+      {/* Right Panel: Editor & Terminal */}
+      {
+        (currentSection.type !== 'quiz' || (quizStage !== 'config' && quizStage !== 'revision_snapshot' && quizStage !== 'quiz_snapshot')) && (
+          <div className="w-1/2 flex flex-col bg-[#1e1e1e]">
+            {/* Editor Toolbar */}
+            <div className="h-12 flex items-center justify-between px-4 bg-[#252526] border-b border-[#333]">
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">main.py</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (currentSection.type === 'exercises' && currentExercise) {
+                      setCode(currentExercise.starterCode);
+                    } else if (currentSection.type === 'examples' && currentSection.examples?.[0]) {
+                      setCode(currentSection.examples[0].code);
+                    } else if (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex]) {
+                      setCode(quizQuestions[currentQuizQuestionIndex].starterCode);
+                    }
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  title="Reset Code"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Monaco Editor */}
+            <div className="flex-1 relative">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value || "")}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 16,
+                  padding: { top: 20 },
+                  scrollBeyondLastLine: false,
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                }}
+              />
+            </div>
+
+            {/* Action Bar */}
+            <div className="h-16 bg-[#252526] border-t border-[#333] flex items-center justify-between px-6">
+              <div className="flex items-center gap-2">
+                {!isReady ? (
+                  <span className="text-yellow-500 text-sm flex items-center gap-2">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    Loading Python Environment...
+                  </span>
+                ) : (
+                  <span className="text-green-500 text-sm flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    Ready
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRun}
+                  disabled={!isReady || isRunning}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-900/20"
+                >
+                  {isRunning ? (
+                    <span className="animate-spin">⟳</span>
+                  ) : (
+                    <Play className="w-4 h-4 fill-current" />
+                  )}
+                  Run Code
+                </button>
+
+                {((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
+                  <button
+                    onClick={handleCheck}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600"
+                  >
+                    Check Answer
+                  </button>
+                )}
+
+                {/* AI Help Buttons */}
+                {output.some(line => line.includes("Error")) && (
+                  <button
+                    onClick={() => askAI('explain_error')}
+                    disabled={isAiLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all disabled:opacity-50"
+                  >
+                    {isAiLoading ? "Thinking..." : "Explain Error"}
+                  </button>
+                )}
+
+                {(currentSection.type === 'exercises' || quizStage === 'revision') && (
+                  <button
+                    onClick={() => askAI('hint')}
+                    disabled={isAiLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-900/30 text-purple-400 border border-purple-800 hover:bg-purple-900/50 transition-all disabled:opacity-50"
+                  >
+                    {isAiLoading ? "Thinking..." : "✨ AI Hint"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Terminal Output */}
+            <div className="h-1/3 bg-[#1e1e1e] border-t border-[#333] flex flex-col">
+              <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Terminal</span>
+                {isCorrect !== null && (
+                  <span className={clsx(
+                    "text-xs font-bold px-2 py-1 rounded flex items-center gap-1",
+                    isCorrect ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"
+                  )}>
+                    {isCorrect ? <><CheckCircle className="w-3 h-3" /> CORRECT!</> : <><XCircle className="w-3 h-3" /> TRY AGAIN</>}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 p-4 font-mono text-sm overflow-y-auto">
+                {output.length === 0 ? (
+                  <span className="text-slate-600 italic">Output will appear here...</span>
+                ) : (
+                  output.map((line, i) => (
+                    <div key={i} className="text-slate-300 mb-1">{line}</div>
+                  ))
+                )}
+
+                {/* AI Feedback Display */}
+                {aiFeedback && (
+                  <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
+                        ✨ AI Tutor
+                      </h4>
+                      <button onClick={() => setAiFeedback(null)} className="text-slate-500 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiFeedback}</p>
+                  </div>
+                )}
+
+                {isCorrect === true && (
+                  <div className="mt-4 text-green-400 font-bold flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    Perfect! Try the next exercise or move to the next section.
+                  </div>
+                )}
+                {isCorrect === false && (
+                  <div className="mt-4 text-red-400 font-bold flex items-center gap-2">
+                    <XCircle className="w-5 h-5" />
+                    Not quite. Check the hint or try again!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </main >
+  );
+}
 
 

@@ -969,15 +969,23 @@ export default function Home() {
                   Run Code
                 </button>
 
-                {((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
+{((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
                   <button
                     onClick={handleCheck}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600"
+                    disabled={isAiLoading}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Check Answer
+                    {isAiLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      'Check Answer'
+                    )}
                   </button>
                 )}
-
+                
                 {/* AI Help Buttons */}
                 {output.some(line => line.includes("Error")) && (
                   <button

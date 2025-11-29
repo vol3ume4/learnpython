@@ -11,11 +11,11 @@ interface QuizConfigProps {
 export default function QuizConfig({ onStart }: QuizConfigProps) {
     const [difficulty, setDifficulty] = useState<Difficulty>('mixed');
 
-    const difficulties: { id: Difficulty; label: string; color: string; desc: string }[] = [
-        { id: 'easy', label: 'Easy', color: 'text-green-400', desc: 'Warm-up questions to build confidence.' },
-        { id: 'medium', label: 'Medium', color: 'text-yellow-400', desc: 'Standard challenge level.' },
-        { id: 'hard', label: 'Hard', color: 'text-red-400', desc: 'Tough questions to test deep understanding.' },
-        { id: 'mixed', label: 'Mixed', color: 'text-purple-400', desc: 'A balanced mix of all levels.' },
+    const difficulties: { id: Difficulty; label: string; color: string; desc: string; icon: React.ReactNode }[] = [
+        { id: 'easy', label: 'Easy', color: 'text-green-400', desc: 'Warm-up questions to build confidence.', icon: <Shield className="w-5 h-5" /> },
+        { id: 'medium', label: 'Medium', color: 'text-yellow-400', desc: 'Standard challenge level.', icon: <Zap className="w-5 h-5" /> },
+        { id: 'hard', label: 'Hard', color: 'text-red-400', desc: 'Tough questions to test deep understanding.', icon: <Brain className="w-5 h-5" /> },
+        { id: 'mixed', label: 'Mixed', color: 'text-purple-400', desc: 'A balanced mix of all levels.', icon: <Rocket className="w-5 h-5" /> },
     ];
 
     return (
@@ -47,9 +47,12 @@ export default function QuizConfig({ onStart }: QuizConfigProps) {
                         )}
                     >
                         <div className="flex items-start justify-between mb-2">
-                            <span className={clsx("text-lg font-bold", level.color)}>
-                                {level.label}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className={clsx(level.color)}>{level.icon}</span>
+                                <span className={clsx("text-lg font-bold", level.color)}>
+                                    {level.label}
+                                </span>
+                            </div>
                             {difficulty === level.id && (
                                 <div className="h-4 w-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                             )}

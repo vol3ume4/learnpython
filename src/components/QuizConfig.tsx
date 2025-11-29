@@ -26,7 +26,7 @@ export default function QuizConfig({ onStart }: QuizConfigProps) {
                     <Zap className="w-12 h-12 text-orange-500" />
                 </div>
                 <h1 className="text-4xl font-bold text-white bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">
-                    Unlock Quiz Mode
+                    Unlock Chapter Quiz
                 </h1>
                 <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
                     Ready to test your knowledge? We'll start with a quick <strong>5-question revision</strong> followed by a <strong>10-question AI surprise quiz</strong>.

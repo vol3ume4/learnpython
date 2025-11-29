@@ -23,30 +23,16 @@ export async function POST(request: NextRequest) {
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        const prompt = `You are a Python programming tutor evaluating a student's code.
-
-**Question:** ${question}
-
-**Expected Output (Reference):** ${expectedOutput || 'Not specified - evaluate based on correctness of logic'}
-
-**Student's Code:**
-\`\`\`python
+        const prompt = `Evaluate Python code.
+Q: ${question}
+Expected: ${expectedOutput || 'Logic correctness'}
+Code:
 ${code}
-\`\`\`
+Output:
+${output || 'None'}
 
-**Student's Output:**
-${output || 'No output produced'}
-
-**Task:** Evaluate if the student's code correctly solves the problem. Consider:
-1. Does the code logic match what the question asks?
-2. Does it produce the correct type of output (even if values differ)?
-3. Are there any syntax or logical errors?
-4. For questions asking to "create variables and print", any valid values are acceptable.
-
-**IMPORTANT:** Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{"correct": true, "feedback": "Your explanation here", "suggestion": "Optional hint"}
-
-Be lenient with variable values if the question doesn't specify exact values. Focus on correctness of the approach and logic.`;
+Task: Check correctness (logic/output). Ignore variable values unless specified.
+Respond JSON only: {"correct": boolean, "feedback": "1 sentence summary", "suggestion": "Short hint if wrong"}`;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();

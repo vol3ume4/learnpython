@@ -186,7 +186,7 @@ You can think of variables as sticky notes you place on different objects. The n
                 },
                 {
                     id: "variables-quiz",
-                    title: "Optional Surprise Quiz",
+                    title: "Unlock Chapter Quiz",
                     type: "quiz"
                 }
             ]
@@ -257,6 +257,11 @@ power = 2 ** 3  # 8
                             expectedOutput: "64"
                         }
                     ]
+                },
+                {
+                    id: "math-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -438,6 +443,11 @@ Python also lets you convert values from one type to another using casting funct
                             expectedOutput: "7"
                         }
                     ]
+                },
+                {
+                    id: "datatypes-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -496,6 +506,11 @@ Finally, **f-strings** allow you to combine text with variables in a clean and r
                         { id: "str-hard-4", level: "hard", question: "Debug this code: It should print Hi NAME where NAME is uppercase.\nname = \"alice\"\nprint(\"Hi \" + name.upper)", starterCode: "name = \"alice\"\n# fix the print statement\n", hint: "Remember to call the method with ().", solution: "name = \"alice\"\nprint(\"Hi \" + name.upper())", expectedOutput: "Hi ALICE" },
                         { id: "str-hard-5", level: "hard", question: "Using an f-string, print \"Total: 45\" where the number comes from a string value qty = \"15\" converted to int and multiplied by 3.", starterCode: "qty = \"15\"\n# convert, compute, print\n", hint: "Use int(qty) * 3.", solution: "qty = \"15\"\nresult = int(qty) * 3\nprint(f\"Total: {result}\")", expectedOutput: "Total: 45" }
                     ]
+                },
+                {
+                    id: "strings-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -554,6 +569,11 @@ Because conditions can compare numbers, strings, and even check membership using
                         { id: "if-hard-4", level: "hard", question: "Debug this code:\nval = 10\nif val = 10:\n    print(\"Ten\")", starterCode: "val = 10\n# fix the condition\n", hint: "Use == for comparison.", solution: "val = 10\nif val == 10:\n    print(\"Ten\")", expectedOutput: "Ten" },
                         { id: "if-hard-5", level: "hard", question: "Using name = \"Charlie\", check if it contains \"C\". If yes, print \"Uppercase C found\". Otherwise, check if it contains \"c\" and print \"Lowercase c found\". If neither is found, print \"None\".", starterCode: "name = \"Charlie\"\n# multiple conditions\n", hint: "Chain checks using if/elif/else.", solution: "name = \"Charlie\"\nif \"C\" in name:\n    print(\"Uppercase C found\")\nelif \"c\" in name:\n    print(\"Lowercase c found\")\nelse:\n    print(\"None\")", expectedOutput: "Uppercase C found" }
                     ]
+                },
+                {
+                    id: "if-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -612,6 +632,11 @@ For loops can also move through the characters of a string, one letter at a time
                         { id: "for-hard-4", level: "hard", question: "Count how many uppercase letters are in the string s = \"PyThOn\".", starterCode: "s = \"PyThOn\"\ncount = 0\nfor ch in s:\n    # check uppercase\nprint(count)", hint: "Uppercase letters equal ch.upper() and are alphabetic.", solution: "s = \"PyThOn\"\ncount = 0\nfor ch in s:\n    if ch.isupper():\n        count = count + 1\nprint(count)", expectedOutput: "3" },
                         { id: "for-hard-5", level: "hard", question: "Using nested loops, print the following pattern of letters from the string word = \"ABC\":\nA\nAB\nABC", starterCode: "word = \"ABC\"\nfor i in range(1, len(word)+1):\n    # nested loop prints letters\n", hint: "Use word[j] inside inner loop.", solution: "word = \"ABC\"\nfor i in range(1, len(word) + 1):\n    for j in range(i):\n        print(word[j], end=\"\")\n    print()", expectedOutput: "A\nAB\nABC" }
                     ]
+                },
+                {
+                    id: "for-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -670,6 +695,11 @@ While loops are useful for countdowns, building totals until a target is reached
                         { id: "while-hard-4", level: "hard", question: "Debug this loop. It should print letters of s = \"Zoo\" but runs forever.\ns = \"Zoo\"\ni = 0\nwhile i < len(s):\n    print(s[i])", starterCode: "s = \"Zoo\"\ni = 0\nwhile i < len(s):\n    print(s[i])\n    # fix update\n", hint: "Increase i inside the loop.", solution: "s = \"Zoo\"\ni = 0\nwhile i < len(s):\n    print(s[i])\n    i = i + 1", expectedOutput: "Z\no\no" },
                         { id: "while-hard-5", level: "hard", question: "Using a while loop and if statements, print numbers from 1 to 20 but:\n- Print \"Even\" for even numbers\n- Print the number itself for odd numbers\nStop early if the number is divisible by 9.", starterCode: "n = 1\nwhile n <= 20:\n    # check stop\n    # check even/odd\n    # update n\n", hint: "Use n % 9 == 0 to break.", solution: "n = 1\nwhile n <= 20:\n    if n % 9 == 0:\n        break\n    if n % 2 == 0:\n        print(\"Even\")\n    else:\n        print(n)\n    n = n + 1", expectedOutput: "1\nEven\n3\nEven\n5\nEven\n7\nEven" }
                     ]
+                },
+                {
+                    id: "while-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -728,6 +758,11 @@ A function can also send back a result using the \`return\` keyword. Returning i
                         { id: "func-hard-4", level: "hard", question: "Debug this code: It should return the square of x but always prints None.\ndef square(x):\n    print(x*x)\n\nprint(square(5))", starterCode: "def square(x):\n    # fix to return value\n\nprint(square(5))", hint: "Printing is not returning.", solution: "def square(x):\n    return x * x\n\nprint(square(5))", expectedOutput: "25" },
                         { id: "func-hard-5", level: "hard", question: "Write two functions: is_vowel(ch) that returns True if ch is a vowel, and count_vowels(s) that uses is_vowel to count vowels in s.", starterCode: "def is_vowel(ch):\n    # return True for vowels\n\ndef count_vowels(s):\n    # loop and count\n\nprint(count_vowels(\"apple\"))", hint: "Call is_vowel inside count_vowels.", solution: "def is_vowel(ch):\n    return ch in \"aeiouAEIOU\"\n\ndef count_vowels(s):\n    count = 0\n    for ch in s:\n        if is_vowel(ch):\n            count = count + 1\n    return count\n\nprint(count_vowels(\"apple\"))", expectedOutput: "2" }
                     ]
+                },
+                {
+                    id: "functions-basics-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -786,6 +821,11 @@ When a local variable has the same name as a global variable, the local one "**s
                         { id: "scope-hard-4", level: "hard", question: "Debug this: It expects local and global variables to mix incorrectly.\na = 5\n\ndef test():\n    print(a)\n    a = 3\n    print(a)\n\ntest()", starterCode: "a = 5\n\ndef test():\n    # fix by not assigning inside OR by moving assignment\n    # here, just remove the assignment for clarity\n    print(a)\n\ntest()", hint: "Assigning inside creates a local variable that shadows the global one.", solution: "a = 5\n\ndef test():\n    print(a)\n\ntest()", expectedOutput: "5" },
                         { id: "scope-hard-5", level: "hard", question: "Two functions use the same variable name locally. Show they do not interfere with each other.", starterCode: "def f1():\n    x = 2\n    print(\"f1:\", x)\n\ndef f2():\n    x = 9\n    print(\"f2:\", x)\n\nf1()\nf2()", hint: "Each function has its own local scope.", solution: "def f1():\n    x = 2\n    print(\"f1:\", x)\n\ndef f2():\n    x = 9\n    print(\"f2:\", x)\n\nf1()\nf2()", expectedOutput: "f1: 2\nf2: 9" }
                     ]
+                },
+                {
+                    id: "scope-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         },
@@ -844,6 +884,11 @@ The powerful feature of lists is that they are **mutable**—unlike strings, you
                         { id: "list-hard-4", level: "hard", question: "Reverse the list data = [\"a\", \"b\", \"c\", \"d\"] using slicing and print it.", starterCode: "data = [\"a\", \"b\", \"c\", \"d\"]\n# reverse using slicing\n", hint: "Use data[::-1].", solution: "data = [\"a\", \"b\", \"c\", \"d\"]\nprint(data[::-1])", expectedOutput: "[\"d\", \"c\", \"b\", \"a\"]" },
                         { id: "list-hard-5", level: "hard", question: "Given nums = [2, 4, 6, 8], replace the first element with the sum of the last two elements.", starterCode: "nums = [2, 4, 6, 8]\n# modify nums[0]\n", hint: "Use nums[-1] and nums[-2].", solution: "nums = [2, 4, 6, 8]\nnums[0] = nums[-1] + nums[-2]\nprint(nums)", expectedOutput: "[14, 4, 6, 8]" }
                     ]
+                },
+                {
+                    id: "lists-basics-quiz",
+                    title: "Unlock Chapter Quiz",
+                    type: "quiz"
                 }
             ]
         }

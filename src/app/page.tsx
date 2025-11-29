@@ -26,7 +26,7 @@ export default function Home() {
   const [quizDifficulty, setQuizDifficulty] = useState<'easy' | 'medium' | 'hard' | 'mixed'>('mixed');
   const [quizQuestions, setQuizQuestions] = useState<Exercise[]>([]);
   const [currentQuizQuestionIndex, setCurrentQuizQuestionIndex] = useState(0);
-  const [quizResults, setQuizResults] = useState<{ questionId: string, correct: boolean, skipped: boolean }[]>([]);
+  const [quizResults, setQuizResults] = useState<{ questionId: string, correct: boolean, skipped: boolean, feedback?: string }[]>([]);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showTOC, setShowTOC] = useState(false);
   const router = useRouter();
@@ -273,6 +273,8 @@ export default function Home() {
     setIsAiLoading(true);
     let isCorrect = false;
 
+    let feedback = "";
+
     try {
       const response = await fetch('/api/analyze-answer', {
         method: 'POST',
@@ -287,6 +289,7 @@ export default function Home() {
 
       const data = await response.json();
       isCorrect = data.correct !== undefined ? data.correct : false;
+      feedback = data.feedback || "";
     } catch (error) {
       console.error('AI evaluation failed:', error);
       // Fallback to simple comparison
@@ -300,7 +303,8 @@ export default function Home() {
     setQuizResults(prev => [...prev, {
       questionId: exercise.id,
       correct: isCorrect,
-      skipped: false
+      skipped: false,
+      feedback: feedback
     }]);
 
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
@@ -393,7 +397,7 @@ export default function Home() {
             {currentSection.type === 'examples' && <Code2 className="w-8 h-8 text-purple-400" />}
             {currentSection.type === 'exercises' && <Trophy className="w-8 h-8 text-yellow-400" />}
             {currentSection.type === 'quiz' && <Zap className="w-8 h-8 text-orange-400" />}
-            {currentSection.title}
+            {currentSection.type === 'quiz' ? "Unlock Chapter Quiz" : currentSection.title}
           </h1>
         </header>
 
@@ -575,25 +579,34 @@ export default function Home() {
                     {quizQuestions.map((q, idx) => {
                       const result = quizResults.find(r => r.questionId === q.id);
                       return (
-                        <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-slate-500 font-mono text-sm font-bold">Q{idx + 1}</span>
-                            <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
-                          </div>
-                          <div>
-                            {result?.correct ? (
-                              <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
-                                <CheckCircle className="w-4 h-4" /> Correct
-                              </span>
-                            ) : result?.skipped ? (
-                              <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                                <MinusCircle className="w-4 h-4" /> Skipped
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
-                                <XCircle className="w-4 h-4" /> Incorrect
-                              </span>
-                            )}
+                        <div key={q.id} className="p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-start gap-3">
+                              <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
+                              <div>
+                                <p className="text-slate-300 font-medium mb-1">{q.question}</p>
+                                {result?.feedback && (
+                                  <p className="text-sm text-slate-400 italic border-l-2 border-slate-700 pl-2 mt-1">
+                                    AI: {result.feedback}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0 ml-4">
+                              {result?.correct ? (
+                                <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
+                                  <CheckCircle className="w-5 h-5" />
+                                </span>
+                              ) : result?.skipped ? (
+                                <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
+                                  <MinusCircle className="w-5 h-5" />
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
+                                  <XCircle className="w-5 h-5" />
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

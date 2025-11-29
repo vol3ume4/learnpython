@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy } from 'lucide-react';
+import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy, Menu, X } from 'lucide-react';
 import { courseData } from '@/lib/course-content';
 import { usePyodide } from '@/hooks/usePyodide';
 import { DifficultyLevel, Exercise } from '@/lib/types';
@@ -17,6 +17,7 @@ export default function Home() {
   const { isReady, runCode, output, isRunning, resetOutput } = usePyodide();
   const [showHint, setShowHint] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [showTOC, setShowTOC] = useState(false);
 
   const currentChapter = courseData.chapters[currentChapterIndex];
   const currentSection = currentChapter.sections[currentSectionIndex];
@@ -100,6 +101,13 @@ export default function Home() {
     if (!isFirstExercise) setCurrentExerciseIndex(prev => prev - 1);
   };
 
+  const navigateToSection = (chapterIdx: number, sectionIdx: number) => {
+    setCurrentChapterIndex(chapterIdx);
+    setCurrentSectionIndex(sectionIdx);
+    setCurrentExerciseIndex(0);
+    setShowTOC(false);
+  };
+
   const getDifficultyColor = (level: DifficultyLevel) => {
     switch (level) {
       case 'easy': return 'text-green-400 bg-green-900/30 border-green-700';
@@ -108,18 +116,90 @@ export default function Home() {
     }
   };
 
+  const getSectionIcon = (type: string) => {
+    switch (type) {
+      case 'theory': return <BookOpen className="w-4 h-4" />;
+      case 'examples': return <Code2 className="w-4 h-4" />;
+      case 'exercises': return <Trophy className="w-4 h-4" />;
+      default: return null;
+    }
+  };
+
   return (
     <main className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      {/* Table of Contents Sidebar */}
+      <div className={clsx(
+        "fixed inset-y-0 left-0 z-50 w-80 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out overflow-y-auto",
+        showTOC ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900 z-10">
+          <h2 className="text-xl font-bold text-white">Table of Contents</h2>
+          <button
+            onClick={() => setShowTOC(false)}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {courseData.chapters.map((chapter, chapterIdx) => (
+            <div key={chapter.id} className="space-y-2">
+              <div className="font-semibold text-blue-400 text-sm uppercase tracking-wider">
+                Chapter {chapterIdx + 1}: {chapter.title}
+              </div>
+              <div className="space-y-1 ml-2">
+                {chapter.sections.map((section, sectionIdx) => (
+                  <button
+                    key={section.id}
+                    onClick={() => navigateToSection(chapterIdx, sectionIdx)}
+                    className={clsx(
+                      "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
+                      chapterIdx === currentChapterIndex && sectionIdx === currentSectionIndex
+                        ? "bg-blue-600 text-white font-medium"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    )}
+                  >
+                    {getSectionIcon(section.type)}
+                    <span className="flex-1">{section.title}</span>
+                    {section.type === 'exercises' && (
+                      <span className="text-xs opacity-70">15</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Overlay */}
+      {showTOC && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setShowTOC(false)}
+        />
+      )}
+
       {/* Left Panel: Content */}
       <div className="w-1/2 flex flex-col border-r border-slate-800">
         {/* Header */}
         <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
-          <div className="flex items-center gap-2 text-sm text-blue-400 font-medium mb-2">
-            <span>{courseData.title}</span>
-            <span>/</span>
-            <span>{currentChapter.title}</span>
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              onClick={() => setShowTOC(true)}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              title="Table of Contents"
+            >
+              <Menu className="w-5 h-5 text-slate-400" />
+            </button>
+            <div className="flex items-center gap-2 text-sm text-blue-400 font-medium">
+              <span>{courseData.title}</span>
+              <span>/</span>
+              <span>{currentChapter.title}</span>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 ml-14">
             {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}
             {currentSection.type === 'examples' && <Code2 className="w-8 h-8 text-purple-400" />}
             {currentSection.type === 'exercises' && <Trophy className="w-8 h-8 text-yellow-400" />}

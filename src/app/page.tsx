@@ -115,6 +115,7 @@ export default function Home() {
     resetOutput();
     setShowHint(false);
     setIsCorrect(null);
+    setAiFeedback(null);
   }, [currentSectionIndex, currentExerciseIndex, selectedDifficulty, currentChapterIndex, quizStage, currentQuizQuestionIndex]);
 
   const handleRun = async () => {

@@ -153,9 +153,21 @@ export default function Home() {
 
       if (data.correct !== undefined) {
         console.log('Setting isCorrect to:', data.correct);
-        setIsCorrect(data.correct);
-        if (data.feedback) {
-          setAiFeedback(data.feedback + (data.suggestion ? '\n\n💡 ' + data.suggestion : ''));
+        
+        // Double-check: if AI says incorrect but output actually matches, override
+        const expected = exercise.expectedOutput.trim();
+        const actual = output.join('\n').trim();
+        const outputMatches = actual === expected || actual.includes(expected);
+        
+        if (!data.correct && outputMatches) {
+          console.log('AI marked wrong but output matches - overriding to correct');
+          setIsCorrect(true);
+          setAiFeedback("Great! Your output is correct! 🎉");
+        } else {
+          setIsCorrect(data.correct);
+          if (data.feedback) {
+            setAiFeedback(data.feedback + (data.suggestion ? '\n\n💡 ' + data.suggestion : ''));
+          }
         }
       } else {
         console.warn('No correct field in response, using fallback');
@@ -361,12 +373,29 @@ export default function Home() {
       let updatedResults;
       if (data.results && Array.isArray(data.results) && data.results.length > 0) {
         console.log('Using AI evaluation results');
-        updatedResults = quizResults.map((result, index) => ({
-          ...result,
-          correct: data.results[index]?.correct || false,
-          feedback: data.results[index]?.feedback || "",
-          suggestion: data.results[index]?.suggestion || ""
-        }));
+        updatedResults = quizResults.map((result, index) => {
+          const aiResult = data.results[index];
+          const expected = quizQuestions[index].expectedOutput.trim();
+          const actual = (result.userOutput || '').trim();
+          const outputMatches = actual === expected || actual.includes(expected);
+          
+          // Double-check: if AI says incorrect but output matches, override
+          let finalCorrect = aiResult?.correct || false;
+          let finalFeedback = aiResult?.feedback || "";
+          
+          if (!finalCorrect && outputMatches) {
+            console.log(`Q${index + 1}: AI marked wrong but output matches - overriding to correct`);
+            finalCorrect = true;
+            finalFeedback = "Correct! Your output matches perfectly.";
+          }
+          
+          return {
+            ...result,
+            correct: finalCorrect,
+            feedback: finalFeedback,
+            suggestion: aiResult?.suggestion || ""
+          };
+        });
         setQuizResults(updatedResults);
       } else {
         console.log('Falling back to simple comparison');

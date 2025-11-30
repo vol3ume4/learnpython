@@ -13,7 +13,7 @@ export async function POST(request: Request) {
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         // Create a batch prompt for all answers
-        const batchPrompt = `You are evaluating ${answers.length} Python programming exercises. For each exercise, determine if the student's answer is correct.
+        const batchPrompt = `You are evaluating ${answers.length} Python exercises for a BEGINNER student.
 
 ${answers.map((answer, index) => `
 **Question ${index + 1}:**
@@ -24,21 +24,28 @@ ${answer.expectedOutput}
 
 **Student's Code:**
 \`\`\`python
-${answer.userCode}
+${answer.userCode || 'No code provided'}
 \`\`\`
 
 **Student's Output:**
-${answer.userOutput}
+${answer.userOutput || 'No output'}
 `).join('\n---\n')}
 
-For each question, provide a JSON object with:
-- correct: boolean (true if answer is correct)
-- feedback: string (brief explanation)
-- suggestion: string (optional hint if incorrect)
+**Evaluation Criteria:**
+- Mark CORRECT if the student's output matches the expected output (be lenient with whitespace)
+- Mark CORRECT if the code achieves the task goal, even if code style varies
+- Only mark INCORRECT if output is clearly wrong or missing
+- Be GENEROUS to beginners
 
-Return ONLY a JSON array with ${answers.length} objects, one for each question in order. Format:
+For each question, respond with:
+- correct: boolean (true if output matches expected)
+- feedback: string (brief, encouraging explanation)
+- suggestion: string (hint if incorrect, or empty string if correct)
+
+Return ONLY a valid JSON array with ${answers.length} objects in order (no markdown, no extra text):
 [
-  { "correct": true/false, "feedback": "...", "suggestion": "..." },
+  {"correct": true, "feedback": "Perfect!", "suggestion": ""},
+  {"correct": false, "feedback": "Close but...", "suggestion": "Try..."},
   ...
 ]`;
 

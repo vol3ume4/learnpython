@@ -711,8 +711,85 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto p-8">
           {/* Theory Section */}
           {currentSection.type === 'theory' && currentSection.content && (
-            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-headings:mt-8 prose-headings:mb-4 prose-p:text-slate-300 prose-p:mb-6 prose-p:leading-relaxed prose-strong:text-white prose-code:text-blue-400 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-pre:my-6 prose-ul:my-4 prose-ul:space-y-2 prose-ol:my-4 prose-ol:space-y-2 prose-li:text-slate-300 prose-table:border-collapse prose-table:my-6 prose-th:border prose-th:border-slate-700 prose-th:bg-slate-800 prose-th:px-4 prose-th:py-3 prose-td:border prose-td:border-slate-700 prose-td:px-4 prose-td:py-3">
-              <ReactMarkdown>{currentSection.content}</ReactMarkdown>
+            <div className="theory-content">
+              <ReactMarkdown
+                components={{
+                  h1: ({children}) => (
+                    <h1 className="text-3xl font-bold text-white mt-10 mb-6 pb-3 border-b border-slate-700/50">{children}</h1>
+                  ),
+                  h2: ({children}) => (
+                    <h2 className="text-2xl font-semibold text-white mt-10 mb-5 flex items-center gap-3">
+                      <span className="w-1 h-6 bg-blue-500 rounded-full"></span>
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({children}) => (
+                    <h3 className="text-xl font-medium text-slate-200 mt-8 mb-4">{children}</h3>
+                  ),
+                  p: ({children}) => (
+                    <p className="text-slate-300 text-lg leading-8 mb-6">{children}</p>
+                  ),
+                  strong: ({children}) => (
+                    <strong className="text-white font-semibold">{children}</strong>
+                  ),
+                  code: ({className, children}) => {
+                    const isBlock = className?.includes('language-');
+                    if (isBlock) {
+                      return (
+                        <code className={`${className} block`}>{children}</code>
+                      );
+                    }
+                    return (
+                      <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
+                    );
+                  },
+                  pre: ({children}) => (
+                    <div className="my-8 rounded-xl overflow-hidden border border-slate-700/50 shadow-lg shadow-black/20">
+                      <div className="bg-slate-800/50 px-4 py-2 border-b border-slate-700/50 flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
+                        <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                        <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
+                        <span className="ml-3 text-xs text-slate-500 font-mono">python</span>
+                      </div>
+                      <pre className="bg-slate-900/80 p-5 overflow-x-auto text-sm leading-relaxed">{children}</pre>
+                    </div>
+                  ),
+                  ul: ({children}) => (
+                    <ul className="my-6 space-y-3">{children}</ul>
+                  ),
+                  ol: ({children}) => (
+                    <ol className="my-6 space-y-3 list-decimal list-inside">{children}</ol>
+                  ),
+                  li: ({children}) => (
+                    <li className="text-slate-300 text-lg leading-7 flex items-start gap-3">
+                      <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                      <span>{children}</span>
+                    </li>
+                  ),
+                  table: ({children}) => (
+                    <div className="my-8 rounded-xl overflow-hidden border border-slate-700/50 shadow-lg shadow-black/10">
+                      <table className="w-full">{children}</table>
+                    </div>
+                  ),
+                  thead: ({children}) => (
+                    <thead className="bg-slate-800/70">{children}</thead>
+                  ),
+                  th: ({children}) => (
+                    <th className="px-5 py-3.5 text-left text-sm font-semibold text-slate-200 border-b border-slate-700/50">{children}</th>
+                  ),
+                  td: ({children}) => (
+                    <td className="px-5 py-3.5 text-slate-300 border-b border-slate-800/50">{children}</td>
+                  ),
+                  blockquote: ({children}) => (
+                    <blockquote className="my-6 pl-5 border-l-4 border-blue-500 bg-blue-500/5 py-4 pr-4 rounded-r-lg text-slate-300 italic">{children}</blockquote>
+                  ),
+                  hr: () => (
+                    <hr className="my-10 border-slate-700/50" />
+                  ),
+                }}
+              >
+                {currentSection.content}
+              </ReactMarkdown>
             </div>
           )}
 

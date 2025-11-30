@@ -914,7 +914,7 @@ export default function Home() {
                         {Math.round(((finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length / quizQuestions.length) * 100)}%
                       </span>
                     </div>
-                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Snapshot</h2>
+                    <h2 className="text-4xl font-bold text-white mb-3">Chapter Quiz Snapshot</h2>
                     {(() => {
                       const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
                       const score = resultsToUse.filter(r => r.correct).length;

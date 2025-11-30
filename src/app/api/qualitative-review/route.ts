@@ -32,13 +32,18 @@ ${answersContext}
 
 Write a SHORT, qualitative review (MAX 40 words / 50 tokens) that:
 
-1. Identify 1-2 specific strengths in their code (syntax, functions used, patterns)
-2. Note 1 growth area constructively
-3. Be warm and encouraging
+1. Be positive ONLY about questions the student actually ATTEMPTED (not skipped)
+2. If questions were skipped, acknowledge this honestly (e.g., "I see you skipped some questions - that's okay!")
+3. Identify specific strengths in their attempted code
+4. Note 1 growth area constructively
+5. Be warm and encouraging
 
-Focus on CODE observations. Example: "Strong use of print() and variables! Work on comparison operators (< vs >). You're writing valid Python - keep practicing!"
+IMPORTANT: Do NOT praise code that wasn't written. If all questions were skipped, encourage them to try next time.
 
-Keep it BRIEF and friendly.`;
+Example for attempted: "Strong use of print() and variables! Work on comparison operators. Keep practicing!"
+Example for skipped: "I see you skipped this round - no worries! Try the revision questions to build confidence."
+
+Keep it BRIEF, HONEST, and friendly.`;
 
         const result = await model.generateContent(prompt);
         const reviewText = result.response.text();

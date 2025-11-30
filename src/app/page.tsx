@@ -260,7 +260,7 @@ export default function Home() {
   const handleNextQuizQuestion = () => {
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
-      correct: true,
+      correct: isCorrect === true, // Use actual evaluation result, not hardcoded true
       skipped: false,
       feedback: aiFeedback || "",
       question: quizQuestions[currentQuizQuestionIndex].question,

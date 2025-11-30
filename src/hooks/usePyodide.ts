@@ -23,6 +23,11 @@ export function usePyodide() {
                     pyodideRef.current = await window.loadPyodide({
                         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
                     });
+                    pyodideRef.current.setStdout({
+                        batched: (msg: string) => {
+                            setOutput((prev) => [...prev, msg]);
+                        }
+                    });
                     console.log('✅ Pyodide initialized successfully');
                     setIsReady(true);
                 } catch (err) {

@@ -15,37 +15,53 @@ export function usePyodide() {
 
     useEffect(() => {
         const loadPyodideScript = async () => {
+            console.log('🐍 Starting Pyodide load...');
+
             if (window.loadPyodide && !pyodideRef.current) {
-                // Already loaded script, just init
-                pyodideRef.current = await window.loadPyodide({
-                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
-                });
-                setIsReady(true);
-                return;
-            }
-
-            if (pyodideRef.current) return; // Already initialized
-
-            const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
-            script.async = true;
-            script.onload = async () => {
+                console.log('✅ Pyodide script already loaded, initializing...');
                 try {
                     pyodideRef.current = await window.loadPyodide({
                         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
                     });
-                    // Redirect stdout to our output array
+                    console.log('✅ Pyodide initialized successfully');
+                    setIsReady(true);
+                } catch (err) {
+                    console.error('❌ Failed to initialize Pyodide:', err);
+                }
+                return;
+            }
+
+            if (pyodideRef.current) {
+                console.log('✅ Pyodide already initialized');
+                return;
+            }
+
+            console.log('📥 Loading Pyodide script from CDN...');
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
+            script.async = true;
+            script.onload = async () => {
+                console.log('✅ Pyodide script loaded, initializing...');
+                try {
+                    pyodideRef.current = await window.loadPyodide({
+                        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
+                    });
                     pyodideRef.current.setStdout({
                         batched: (msg: string) => {
                             setOutput((prev) => [...prev, msg]);
                         }
                     });
+                    console.log('✅ Pyodide ready!');
                     setIsReady(true);
                 } catch (err) {
-                    console.error("Failed to load Pyodide", err);
+                    console.error('❌ Failed to initialize Pyodide:', err);
                 }
             };
+            script.onerror = (err) => {
+                console.error('❌ Failed to load Pyodide script:', err);
+            };
             document.body.appendChild(script);
+            console.log('📌 Pyodide script tag added to DOM');
         };
 
         loadPyodideScript();
@@ -54,11 +70,8 @@ export function usePyodide() {
     const runCode = async (code: string) => {
         if (!pyodideRef.current) return;
         setIsRunning(true);
-        setOutput([]); // Clear previous output
+        setOutput([]);
         try {
-            // We manually redirect stdout in the python code or use the setStdout config above.
-            // The setStdout above captures print() calls.
-            // The return value of runPythonAsync is the result of the last expression.
             await pyodideRef.current.runPythonAsync(code);
         } catch (err: any) {
             setOutput((prev) => [...prev, `Error: ${err.message}`]);

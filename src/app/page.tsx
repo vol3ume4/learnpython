@@ -731,7 +731,28 @@ export default function Home() {
                 </div>
               )}
 
-              {quizStage === 'revision_snapshot' && (
+              {quizStage === 'revision_snapshot' && isAiLoading && (
+                <div className="max-w-2xl mx-auto p-8 text-center">
+                  <div className="mb-8">
+                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
+                      <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Evaluating Your Answers...</h2>
+                    <p className="text-slate-400">Generating your personalized code review</p>
+                  </div>
+                </div>
+              )}
+
+              {quizStage === 'revision_snapshot' && !isAiLoading && (() => {
+                console.log('=== REVISION SNAPSHOT DISPLAY ===');
+                console.log('Quiz Results:', quizResults);
+                console.log('Correct count:', quizResults.filter(r => r.correct).length);
+                console.log('Total questions:', quizQuestions.length);
+                quizResults.forEach((r, i) => {
+                  console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
+                });
+                return true;
+              })() && (
                 <div className="max-w-3xl mx-auto p-8">
                   <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
@@ -875,7 +896,16 @@ export default function Home() {
                 </div>
               )}
 
-              {quizStage === 'quiz_snapshot' && (
+              {quizStage === 'quiz_snapshot' && (() => {
+                console.log('=== QUIZ SNAPSHOT DISPLAY ===');
+                console.log('Quiz Results:', quizResults);
+                console.log('Correct count:', quizResults.filter(r => r.correct).length);
+                console.log('Total questions:', quizQuestions.length);
+                quizResults.forEach((r, i) => {
+                  console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
+                });
+                return true;
+              })() && (
                 <div className="max-w-3xl mx-auto p-8">
                   <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">

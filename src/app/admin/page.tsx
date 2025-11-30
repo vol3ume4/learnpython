@@ -11,10 +11,7 @@ interface RevisionTest {
   chapter_index: number;
   chapter_title: string;
   questions_shown: number;
-  questions_skipped: number;
-  questions_correct: number;
-  questions_wrong: number;
-  remarks: string | null;
+  questions_attempted: number;
   created_at: string;
 }
 
@@ -24,10 +21,15 @@ interface QuizTest {
   chapter_index: number;
   chapter_title: string;
   questions_shown: number;
-  questions_skipped: number;
-  questions_correct: number;
-  questions_wrong: number;
-  remarks: string | null;
+  questions_attempted: number;
+  created_at: string;
+}
+
+interface Feedback {
+  id: string;
+  user_id: string;
+  context: string;
+  message: string;
   created_at: string;
 }
 
@@ -35,8 +37,8 @@ interface ChapterStats {
   chapter_title: string;
   revision_count: number;
   quiz_count: number;
-  revision_avg_score: number;
-  quiz_avg_score: number;
+  revision_avg_attempted: number;
+  quiz_avg_attempted: number;
 }
 
 export default function AdminPage() {
@@ -47,7 +49,7 @@ export default function AdminPage() {
   const [revisionTests, setRevisionTests] = useState<RevisionTest[]>([]);
   const [quizTests, setQuizTests] = useState<QuizTest[]>([]);
   const [chapterStats, setChapterStats] = useState<ChapterStats[]>([]);
-  const [remarks, setRemarks] = useState<{ type: string; chapter: string; remark: string; date: string }[]>([]);
+  const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -82,7 +84,8 @@ export default function AdminPage() {
       await Promise.all([
         loadUserCount(),
         loadRevisionTests(),
-        loadQuizTests()
+        loadQuizTests(),
+        loadFeedback()
       ]);
 
     } catch (error) {
@@ -116,10 +119,17 @@ export default function AdminPage() {
     setQuizTests(data || []);
   };
 
+  const loadFeedback = async () => {
+    const { data } = await supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setFeedbackList(data || []);
+  };
+
   useEffect(() => {
     if (revisionTests.length > 0 || quizTests.length > 0) {
       calculateChapterStats();
-      extractRemarks();
     }
   }, [revisionTests, quizTests]);
 
@@ -132,11 +142,11 @@ export default function AdminPage() {
         chapter_title: test.chapter_title,
         revision_count: 0,
         quiz_count: 0,
-        revision_avg_score: 0,
-        quiz_avg_score: 0
+        revision_avg_attempted: 0,
+        quiz_avg_attempted: 0
       };
       existing.revision_count++;
-      existing.revision_avg_score += (test.questions_correct / test.questions_shown) * 100;
+      existing.revision_avg_attempted += test.questions_attempted || 0;
       statsMap.set(test.chapter_title, existing);
     });
 
@@ -146,53 +156,25 @@ export default function AdminPage() {
         chapter_title: test.chapter_title,
         revision_count: 0,
         quiz_count: 0,
-        revision_avg_score: 0,
-        quiz_avg_score: 0
+        revision_avg_attempted: 0,
+        quiz_avg_attempted: 0
       };
       existing.quiz_count++;
-      existing.quiz_avg_score += (test.questions_correct / test.questions_shown) * 100;
+      existing.quiz_avg_attempted += test.questions_attempted || 0;
       statsMap.set(test.chapter_title, existing);
     });
 
     // Calculate averages
     statsMap.forEach(stat => {
       if (stat.revision_count > 0) {
-        stat.revision_avg_score = Math.round(stat.revision_avg_score / stat.revision_count);
+        stat.revision_avg_attempted = Math.round(stat.revision_avg_attempted / stat.revision_count);
       }
       if (stat.quiz_count > 0) {
-        stat.quiz_avg_score = Math.round(stat.quiz_avg_score / stat.quiz_count);
+        stat.quiz_avg_attempted = Math.round(stat.quiz_avg_attempted / stat.quiz_count);
       }
     });
 
     setChapterStats(Array.from(statsMap.values()));
-  };
-
-  const extractRemarks = () => {
-    const allRemarks: { type: string; chapter: string; remark: string; date: string }[] = [];
-
-    revisionTests.forEach(test => {
-      if (test.remarks) {
-        allRemarks.push({
-          type: 'Revision',
-          chapter: test.chapter_title,
-          remark: test.remarks,
-          date: new Date(test.created_at).toLocaleDateString()
-        });
-      }
-    });
-
-    quizTests.forEach(test => {
-      if (test.remarks) {
-        allRemarks.push({
-          type: 'Quiz',
-          chapter: test.chapter_title,
-          remark: test.remarks,
-          date: new Date(test.created_at).toLocaleDateString()
-        });
-      }
-    });
-
-    setRemarks(allRemarks);
   };
 
   if (loading) {
@@ -254,9 +236,9 @@ export default function AdminPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-2">
               <MessageSquare className="w-5 h-5 text-yellow-400" />
-              <span className="text-slate-400 text-sm">User Remarks</span>
+              <span className="text-slate-400 text-sm">User Feedback</span>
             </div>
-            <p className="text-3xl font-bold text-white">{remarks.length}</p>
+            <p className="text-3xl font-bold text-white">{feedbackList.length}</p>
           </div>
         </div>
 
@@ -272,9 +254,9 @@ export default function AdminPage() {
                   <tr className="border-b border-slate-800">
                     <th className="text-left py-3 px-4 text-slate-400 font-medium">Chapter</th>
                     <th className="text-center py-3 px-4 text-slate-400 font-medium">Revisions</th>
-                    <th className="text-center py-3 px-4 text-slate-400 font-medium">Avg Score</th>
+                    <th className="text-center py-3 px-4 text-slate-400 font-medium">Avg Attempted</th>
                     <th className="text-center py-3 px-4 text-slate-400 font-medium">Quizzes</th>
-                    <th className="text-center py-3 px-4 text-slate-400 font-medium">Avg Score</th>
+                    <th className="text-center py-3 px-4 text-slate-400 font-medium">Avg Attempted</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -283,11 +265,11 @@ export default function AdminPage() {
                       <td className="py-3 px-4 text-white">{stat.chapter_title}</td>
                       <td className="py-3 px-4 text-center text-green-400">{stat.revision_count}</td>
                       <td className="py-3 px-4 text-center text-slate-300">
-                        {stat.revision_count > 0 ? `${stat.revision_avg_score}%` : '-'}
+                        {stat.revision_count > 0 ? `${stat.revision_avg_attempted}/5` : '-'}
                       </td>
                       <td className="py-3 px-4 text-center text-purple-400">{stat.quiz_count}</td>
                       <td className="py-3 px-4 text-center text-slate-300">
-                        {stat.quiz_count > 0 ? `${stat.quiz_avg_score}%` : '-'}
+                        {stat.quiz_count > 0 ? `${stat.quiz_avg_attempted}/10` : '-'}
                       </td>
                     </tr>
                   ))}
@@ -297,25 +279,24 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* User Remarks */}
+        {/* User Feedback */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
-          <h2 className="text-xl font-bold text-white mb-4">User Remarks</h2>
-          {remarks.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">No remarks yet</p>
+          <h2 className="text-xl font-bold text-white mb-4">User Feedback</h2>
+          {feedbackList.length === 0 ? (
+            <p className="text-slate-500 text-center py-8">No feedback yet</p>
           ) : (
             <div className="space-y-3">
-              {remarks.map((r, idx) => (
-                <div key={idx} className="bg-slate-800/50 rounded-lg p-4">
+              {feedbackList.map((f) => (
+                <div key={f.id} className="bg-slate-800/50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      r.type === 'Revision' ? 'bg-green-900/50 text-green-400' : 'bg-purple-900/50 text-purple-400'
-                    }`}>
-                      {r.type}
+                    <span className="text-xs px-2 py-1 rounded bg-blue-900/50 text-blue-400">
+                      📍 {f.context}
                     </span>
-                    <span className="text-slate-500 text-sm">{r.chapter}</span>
-                    <span className="text-slate-600 text-xs ml-auto">{r.date}</span>
+                    <span className="text-slate-600 text-xs ml-auto">
+                      {new Date(f.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <p className="text-slate-300">{r.remark}</p>
+                  <p className="text-slate-300">{f.message}</p>
                 </div>
               ))}
             </div>
@@ -341,10 +322,7 @@ export default function AdminPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-green-400 font-medium">
-                        {test.questions_correct}/{test.questions_shown}
-                      </p>
-                      <p className="text-slate-500 text-xs">
-                        {test.questions_skipped > 0 && `${test.questions_skipped} skipped`}
+                        {test.questions_attempted}/{test.questions_shown} attempted
                       </p>
                     </div>
                   </div>
@@ -370,10 +348,7 @@ export default function AdminPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-purple-400 font-medium">
-                        {test.questions_correct}/{test.questions_shown}
-                      </p>
-                      <p className="text-slate-500 text-xs">
-                        {test.questions_skipped > 0 && `${test.questions_skipped} skipped`}
+                        {test.questions_attempted}/{test.questions_shown} attempted
                       </p>
                     </div>
                   </div>

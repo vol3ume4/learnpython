@@ -11,7 +11,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import QuizConfig from '@/components/QuizConfig';
 import { getRevisionQuestions, getQuizQuestions } from '@/lib/quiz-helpers';
-import RemarksModal from '@/components/RemarksModal';
+import FeedbackModal from '@/components/FeedbackModal';
+import PrivacyDisclaimer from '@/components/PrivacyDisclaimer';
 
 export default function Home() {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -50,105 +51,75 @@ export default function Home() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [qualitativeReview, setQualitativeReview] = useState<string | null>(null);
   
-  // Remarks and test tracking
-  const [showRemarksModal, setShowRemarksModal] = useState(false);
-  const [currentTestId, setCurrentTestId] = useState<string | null>(null);
-  const [currentTestType, setCurrentTestType] = useState<'revision' | 'quiz'>('revision');
+  // Feedback and privacy
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showPrivacyDisclaimer, setShowPrivacyDisclaimer] = useState(false);
+  const [pendingTestType, setPendingTestType] = useState<'revision' | 'quiz'>('revision');
   const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean }>({});
 
-  // Save revision test results to database
+  // Save revision test to database (only tracks attempts, not scores - privacy first)
   const saveRevisionTest = async (results: typeof quizResults) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return;
 
-      const skipped = results.filter(r => r.skipped).length;
-      const correct = results.filter(r => r.correct).length;
-      const wrong = results.filter(r => !r.correct && !r.skipped).length;
+      const attempted = results.filter(r => !r.skipped).length;
 
-      const { data, error } = await supabase
-        .from('revision_tests')
-        .insert({
-          user_id: user.id,
-          chapter_index: currentChapterIndex,
-          chapter_title: currentChapter.title,
-          questions_shown: results.length,
-          questions_skipped: skipped,
-          questions_correct: correct,
-          questions_wrong: wrong
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving revision test:', error);
-        return null;
-      }
+      await supabase.from('revision_tests').insert({
+        user_id: user.id,
+        chapter_index: currentChapterIndex,
+        chapter_title: currentChapter.title,
+        questions_shown: results.length,
+        questions_attempted: attempted
+      });
       
-      console.log('Revision test saved:', data.id);
-      return data.id;
+      console.log('Revision test logged (attempts only)');
     } catch (err) {
       console.error('Failed to save revision test:', err);
-      return null;
     }
   };
 
-  // Save quiz test results to database
+  // Save quiz test to database (only tracks attempts, not scores - privacy first)
   const saveQuizTest = async (results: typeof quizResults) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return;
 
-      const skipped = results.filter(r => r.skipped).length;
-      const correct = results.filter(r => r.correct).length;
-      const wrong = results.filter(r => !r.correct && !r.skipped).length;
+      const attempted = results.filter(r => !r.skipped).length;
 
-      const { data, error } = await supabase
-        .from('quiz_tests')
-        .insert({
-          user_id: user.id,
-          chapter_index: currentChapterIndex,
-          chapter_title: currentChapter.title,
-          questions_shown: results.length,
-          questions_skipped: skipped,
-          questions_correct: correct,
-          questions_wrong: wrong
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving quiz test:', error);
-        return null;
-      }
+      await supabase.from('quiz_tests').insert({
+        user_id: user.id,
+        chapter_index: currentChapterIndex,
+        chapter_title: currentChapter.title,
+        questions_shown: results.length,
+        questions_attempted: attempted
+      });
       
-      console.log('Quiz test saved:', data.id);
-      return data.id;
+      console.log('Quiz test logged (attempts only)');
     } catch (err) {
       console.error('Failed to save quiz test:', err);
-      return null;
     }
   };
 
-  // Update remarks for a test
-  const updateTestRemarks = async (testId: string, testType: 'revision' | 'quiz', remarks: string) => {
-    if (!testId || !remarks) return;
+  // Generate context string for feedback
+  const getFeedbackContext = () => {
+    let context = `Chapter ${currentChapterIndex + 1}: ${currentChapter.title}`;
     
-    try {
-      const table = testType === 'revision' ? 'revision_tests' : 'quiz_tests';
-      const { error } = await supabase
-        .from(table)
-        .update({ remarks })
-        .eq('id', testId);
-
-      if (error) {
-        console.error('Error updating remarks:', error);
-      } else {
-        console.log('Remarks saved successfully');
-      }
-    } catch (err) {
-      console.error('Failed to update remarks:', err);
+    if (quizStage === 'revision') {
+      context += ` > Revision > Q${currentQuizQuestionIndex + 1}`;
+    } else if (quizStage === 'quiz') {
+      context += ` > Quiz > Q${currentQuizQuestionIndex + 1}`;
+    } else if (quizStage === 'revision_snapshot') {
+      context += ' > Revision Snapshot';
+    } else if (quizStage === 'quiz_snapshot') {
+      context += ' > Quiz Snapshot';
+    } else if (currentSection.type === 'exercises') {
+      context += ` > Exercises > Q${currentExerciseIndex + 1}`;
+    } else {
+      context += ` > ${currentSection.title}`;
     }
+    
+    return context;
   };
 
   const askAI = async (type: 'explain_error' | 'hint') => {
@@ -421,14 +392,11 @@ export default function Home() {
       console.log('Transitioning to:', snapshotStage);
       setQuizStage(snapshotStage);
       
-      // Save to database
-      const testType = isQuizMode ? 'quiz' : 'revision';
-      setCurrentTestType(testType);
-      const testId = isQuizMode 
-        ? await saveQuizTest(allResults)
-        : await saveRevisionTest(allResults);
-      if (testId) {
-        setCurrentTestId(testId);
+      // Save to database (only tracks attempts, not scores)
+      if (isQuizMode) {
+        await saveQuizTest(allResults);
+      } else {
+        await saveRevisionTest(allResults);
       }
       
       // Generate qualitative review
@@ -464,8 +432,6 @@ export default function Home() {
         setQualitativeReview("Great effort on the revision! Keep practicing to strengthen your Python skills.");
       } finally {
         setIsAiLoading(false);
-        // Show remarks modal after everything is loaded
-        setTimeout(() => setShowRemarksModal(true), 500);
       }
     }
   };
@@ -588,12 +554,8 @@ export default function Home() {
       // Wait for background evaluations to complete (they run in parallel)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Save quiz results to database
-      setCurrentTestType('quiz');
-      const testId = await saveQuizTest(allResults);
-      if (testId) {
-        setCurrentTestId(testId);
-      }
+      // Save quiz to database (only tracks attempts, not scores)
+      await saveQuizTest(allResults);
       
       // Generate qualitative review using the evaluated results
       try {
@@ -624,8 +586,6 @@ export default function Home() {
       }
       
       setIsAiLoading(false);
-      // Show remarks modal after everything is loaded
-      setTimeout(() => setShowRemarksModal(true), 500);
     }
   };
 
@@ -719,16 +679,23 @@ export default function Home() {
                 <span>{currentChapter.title}</span>
               </div>
             </div>
-            {/* ADD SIGN OUT BUTTON HERE */}
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                router.push('/login');
-              }}
-              className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-800"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFeedbackModal(true)}
+                className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-800 flex items-center gap-1.5"
+              >
+                👋 What's up?
+              </button>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push('/login');
+                }}
+                className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-800"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 ml-14">
             {currentSection.type === 'theory' && <BookOpen className="w-8 h-8 text-blue-400" />}
@@ -776,10 +743,8 @@ export default function Home() {
                 <QuizConfig
                   onStart={(difficulty) => {
                     setQuizDifficulty(difficulty);
-                    const questions = getRevisionQuestions(currentChapter.id, difficulty);
-                    setQuizQuestions(questions);
-                    setCurrentQuizQuestionIndex(0);
-                    setQuizStage('revision');
+                    setPendingTestType('revision');
+                    setShowPrivacyDisclaimer(true);
                   }}
                   isLoading={isAiLoading}
                 />
@@ -1020,7 +985,10 @@ export default function Home() {
                       Retry Revision
                     </button>
                     <button
-                      onClick={startMainQuiz}
+                      onClick={() => {
+                        setPendingTestType('quiz');
+                        setShowPrivacyDisclaimer(true);
+                      }}
                       disabled={isAiLoading}
                       className={clsx(
                         "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
@@ -1530,16 +1498,35 @@ export default function Home() {
           </div>
         )
       }
-      {/* Remarks Modal */}
-      <RemarksModal
-        isOpen={showRemarksModal}
-        onClose={() => setShowRemarksModal(false)}
-        onSubmit={async (remarks) => {
-          if (currentTestId && remarks) {
-            await updateTestRemarks(currentTestId, currentTestType, remarks);
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        context={getFeedbackContext()}
+      />
+
+      {/* Privacy Disclaimer before tests */}
+      <PrivacyDisclaimer
+        isOpen={showPrivacyDisclaimer}
+        onAccept={() => {
+          setShowPrivacyDisclaimer(false);
+          if (pendingTestType === 'revision') {
+            // Start revision
+            const questions = getRevisionQuestions(currentChapter.id, quizDifficulty);
+            setQuizQuestions(questions);
+            setCurrentQuizQuestionIndex(0);
+            setQuizResults([]);
+            setFinalResults([]);
+            setIsCorrect(null);
+            setAiFeedback(null);
+            resetOutput();
+            setQuizStage('revision');
+          } else {
+            // Start quiz generation
+            startMainQuiz();
           }
         }}
-        type={currentTestType}
+        type={pendingTestType}
       />
     </main >
   );

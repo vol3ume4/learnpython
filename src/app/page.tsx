@@ -46,6 +46,7 @@ export default function Home() {
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [qualitativeReview, setQualitativeReview] = useState<string | null>(null);
+  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean }>({});
 
   const askAI = async (type: 'explain_error' | 'hint') => {
     setIsAiLoading(true);
@@ -296,6 +297,7 @@ export default function Home() {
       setCurrentQuizQuestionIndex(0);
       setQuizResults([]);
       setQualitativeReview(null);
+      setExpandedQuestions({});
       setQuizStage('quiz');
     }
   };
@@ -634,12 +636,12 @@ export default function Home() {
                   <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
                       const result = quizResults.find(r => r.questionId === q.id);
-                      const [expanded, setExpanded] = React.useState(false);
+                      const isExpanded = expandedQuestions[q.id] || false;
 
                       return (
                         <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
                           <button
-                            onClick={() => setExpanded(!expanded)}
+                            onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
                             className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
                           >
                             <div className="flex items-start justify-between">
@@ -647,7 +649,7 @@ export default function Home() {
                                 <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
                                 <div className="flex-1">
                                   <p className="text-slate-300 font-medium">{q.question}</p>
-                                  {result?.feedback && !expanded && (
+                                  {result?.feedback && !isExpanded && (
                                     <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
                                       AI: {result.feedback}
                                     </p>
@@ -662,12 +664,12 @@ export default function Home() {
                                 ) : (
                                   <XCircle className="w-5 h-5 text-red-400" />
                                 )}
-                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", expanded && "rotate-90")} />
+                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                               </div>
                             </div>
                           </button>
 
-                          {expanded && (
+                          {isExpanded && (
                             <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
                               {result?.userCode && (
                                 <div>
@@ -713,6 +715,7 @@ export default function Home() {
                         setQuizStage('config');
                         setQuizResults([]);
                         setQualitativeReview(null);
+                        setExpandedQuestions({});
                       }}
                       className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
                     >
@@ -778,12 +781,12 @@ export default function Home() {
                   <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
                       const result = quizResults.find(r => r.questionId === q.id);
-                      const [expanded, setExpanded] = React.useState(false);
+                      const isExpanded = expandedQuestions[q.id] || false;
 
                       return (
                         <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
                           <button
-                            onClick={() => setExpanded(!expanded)}
+                            onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
                             className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
                           >
                             <div className="flex items-start justify-between">
@@ -791,7 +794,7 @@ export default function Home() {
                                 <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
                                 <div className="flex-1">
                                   <p className="text-slate-300 font-medium">{q.question}</p>
-                                  {result?.feedback && !expanded && (
+                                  {result?.feedback && !isExpanded && (
                                     <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
                                       AI: {result.feedback}
                                     </p>
@@ -806,12 +809,12 @@ export default function Home() {
                                 ) : (
                                   <XCircle className="w-5 h-5 text-red-400" />
                                 )}
-                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", expanded && "rotate-90")} />
+                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                               </div>
                             </div>
                           </button>
 
-                          {expanded && (
+                          {isExpanded && (
                             <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
                               {result?.userCode && (
                                 <div>
@@ -857,6 +860,7 @@ export default function Home() {
                         setQuizStage('config');
                         setQuizResults([]);
                         setQualitativeReview(null);
+                        setExpandedQuestions({});
                       }}
                       className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
                     >
@@ -874,6 +878,7 @@ export default function Home() {
                         setQuizStage('config');
                         setQuizResults([]);
                         setQualitativeReview(null);
+                        setExpandedQuestions({});
                       }}
                       className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
                     >

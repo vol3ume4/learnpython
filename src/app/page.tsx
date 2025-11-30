@@ -45,6 +45,7 @@ export default function Home() {
   // AI Tutor State
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [qualitativeReview, setQualitativeReview] = useState<string | null>(null);
 
   const askAI = async (type: 'explain_error' | 'hint') => {
     setIsAiLoading(true);
@@ -234,7 +235,10 @@ export default function Home() {
     setQuizResults(prev => [...prev, {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: false,
-      skipped: true
+      skipped: true,
+      question: quizQuestions[currentQuizQuestionIndex].question,
+      userCode: code,
+      userOutput: output.join('\n')
     }]);
     handleNextQuizQuestionLogic();
   };
@@ -243,7 +247,11 @@ export default function Home() {
     setQuizResults(prev => [...prev, {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: true,
-      skipped: false
+      skipped: false,
+      feedback: aiFeedback || "",
+      question: quizQuestions[currentQuizQuestionIndex].question,
+      userCode: code,
+      userOutput: output.join('\n')
     }]);
     handleNextQuizQuestionLogic();
   };
@@ -287,6 +295,7 @@ export default function Home() {
       setIsAiLoading(false);
       setCurrentQuizQuestionIndex(0);
       setQuizResults([]);
+      setQualitativeReview(null);
       setQuizStage('quiz');
     }
   };
@@ -311,14 +320,47 @@ export default function Home() {
 
       const data = await response.json();
 
+      let updatedResults;
       if (data.results && Array.isArray(data.results)) {
-        setQuizResults(prev => prev.map((result, index) => ({
+        updatedResults = quizResults.map((result, index) => ({
           ...result,
           correct: data.results[index]?.correct || false,
           feedback: data.results[index]?.feedback || "",
           suggestion: data.results[index]?.suggestion || ""
-        })));
+        }));
+        setQuizResults(updatedResults);
+      } else {
+        updatedResults = quizResults.map((result, index) => {
+          const expected = quizQuestions[index].expectedOutput.trim();
+          const actual = (result.userOutput || '').trim();
+          return {
+            ...result,
+            correct: actual === expected || actual.includes(expected)
+          };
+        });
+        setQuizResults(updatedResults);
       }
+
+      // Generate qualitative review
+      try {
+        const reviewResponse = await fetch('/api/qualitative-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers: answersToEvaluate,
+            chapterTitle: currentChapter.title
+          })
+        });
+
+        const reviewData = await reviewResponse.json();
+        if (reviewData.review) {
+          setQualitativeReview(reviewData.review);
+        }
+      } catch (reviewError) {
+        console.error('Qualitative review failed:', reviewError);
+        setQualitativeReview("Great work completing the quiz! Keep practicing to strengthen your Python skills.");
+      }
+
     } catch (error) {
       console.error('Batch evaluation failed:', error);
       setQuizResults(prev => prev.map((result, index) => {
@@ -569,8 +611,8 @@ export default function Home() {
               )}
 
               {quizStage === 'revision_snapshot' && (
-                <div className="max-w-2xl mx-auto p-8 text-center">
-                  <div className="mb-8">
+                <div className="max-w-3xl mx-auto p-8">
+                  <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
                       <span className="text-4xl font-bold text-white">
                         {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
@@ -586,87 +628,6 @@ export default function Home() {
                       if (percentage >= 60) return <p className="text-xl text-yellow-400">Good progress! Review and try again! 📚</p>;
                       if (percentage >= 40) return <p className="text-xl text-orange-400">Keep practicing! You're improving! 🔄</p>;
                       return <p className="text-xl text-slate-400">Take your time and review the material! 🚀</p>;
-                    })()}
-                  </div>
-                  <div className="space-y-3 mb-8 text-left">
-                    {quizQuestions.map((q, idx) => {
-                      const result = quizResults.find(r => r.questionId === q.id);
-                      return (
-                        <div key={q.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
-                          <div className="flex items-center gap-3">
-                            <span className="text-slate-500 font-mono text-sm">0{idx + 1}</span>
-                            <span className="text-slate-300 font-medium truncate max-w-xs">{q.question}</span>
-                          </div>
-                          <div>
-                            {result?.correct ? (
-                              <span className="flex items-center gap-2 text-green-400 text-sm font-bold">
-                                <CheckCircle className="w-4 h-4" /> Correct
-                              </span>
-                            ) : result?.skipped ? (
-                              <span className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                                <MinusCircle className="w-4 h-4" /> Skipped
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-2 text-red-400 text-sm font-bold">
-                                <XCircle className="w-4 h-4" /> Incorrect
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => {
-                        setQuizStage('config');
-                        setQuizResults([]);
-                      }}
-                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                    >
-                      Retry Revision
-                    </button>
-                    <button
-                      onClick={startMainQuiz}
-                      disabled={isAiLoading}
-                      className={clsx(
-                        "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
-                        isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500"
-                      )}
-                    >
-                      {isAiLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>Start Main Quiz <ChevronRight className="w-4 h-4" /></>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {quizStage === 'quiz_snapshot' && (
-                <div className="max-w-3xl mx-auto p-8">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
-                      <span className="text-5xl font-bold text-white">
-                        {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
-                      </span>
-                    </div>
-                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
-                    {(() => {
-                      const score = quizResults.filter(r => r.correct).length;
-                      const total = quizQuestions.length;
-                      const percentage = (score / total) * 100;
-
-                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python Pro! 🌟</p>;
-                      if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
-                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
-                      if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;
-                      return <p className="text-xl text-slate-400">Keep learning! Every attempt makes you stronger! 🚀</p>;
                     })()}
                   </div>
 
@@ -751,6 +712,151 @@ export default function Home() {
                       onClick={() => {
                         setQuizStage('config');
                         setQuizResults([]);
+                        setQualitativeReview(null);
+                      }}
+                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                    >
+                      Retry Revision
+                    </button>
+                    <button
+                      onClick={startMainQuiz}
+                      disabled={isAiLoading}
+                      className={clsx(
+                        "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
+                        isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500"
+                      )}
+                    >
+                      {isAiLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>Start Main Quiz <ChevronRight className="w-4 h-4" /></>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {quizStage === 'quiz_snapshot' && (
+                <div className="max-w-3xl mx-auto p-8">
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
+                      <span className="text-5xl font-bold text-white">
+                        {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
+                      </span>
+                    </div>
+                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
+                    {(() => {
+                      const score = quizResults.filter(r => r.correct).length;
+                      const total = quizQuestions.length;
+                      const percentage = (score / total) * 100;
+
+                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python Pro! 🌟</p>;
+                      if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
+                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
+                      if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;
+                      return <p className="text-xl text-slate-400">Keep learning! Every attempt makes you stronger! 🚀</p>;
+                    })()}
+                  </div>
+
+                  {qualitativeReview && (
+                    <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 bg-purple-500/20 rounded-lg">
+                          <Lightbulb className="w-6 h-6 text-purple-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
+                          <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-8">
+                    {quizQuestions.map((q, idx) => {
+                      const result = quizResults.find(r => r.questionId === q.id);
+                      const [expanded, setExpanded] = React.useState(false);
+
+                      return (
+                        <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                          <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
+                                <div className="flex-1">
+                                  <p className="text-slate-300 font-medium">{q.question}</p>
+                                  {result?.feedback && !expanded && (
+                                    <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
+                                      AI: {result.feedback}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result?.correct ? (
+                                  <CheckCircle className="w-5 h-5 text-green-400" />
+                                ) : result?.skipped ? (
+                                  <MinusCircle className="w-5 h-5 text-slate-500" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-400" />
+                                )}
+                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", expanded && "rotate-90")} />
+                              </div>
+                            </div>
+                          </button>
+
+                          {expanded && (
+                            <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
+                              {result?.userCode && (
+                                <div>
+                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                    <code>{result.userCode}</code>
+                                  </pre>
+                                </div>
+                              )}
+
+                              {result?.userOutput && (
+                                <div>
+                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                    {result.userOutput}
+                                  </pre>
+                                </div>
+                              )}
+
+                              {result?.feedback && (
+                                <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                  <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                  <p className="text-sm text-blue-200">{result.feedback}</p>
+                                </div>
+                              )}
+
+                              {result?.suggestion && !result.correct && (
+                                <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                  <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                  <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => {
+                        setQuizStage('config');
+                        setQuizResults([]);
+                        setQualitativeReview(null);
                       }}
                       className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
                     >
@@ -767,6 +873,7 @@ export default function Home() {
                         }
                         setQuizStage('config');
                         setQuizResults([]);
+                        setQualitativeReview(null);
                       }}
                       className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
                     >

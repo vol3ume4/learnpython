@@ -798,7 +798,10 @@ export default function Home() {
                                 {result?.correct ? (
                                   <CheckCircle className="w-5 h-5 text-green-400" />
                                 ) : result?.skipped ? (
-                                  <MinusCircle className="w-5 h-5 text-slate-500" />
+                                  <>
+                                    <span className="text-xs text-slate-500 font-medium">Skipped</span>
+                                    <MinusCircle className="w-5 h-5 text-slate-500" />
+                                  </>
                                 ) : (
                                   <XCircle className="w-5 h-5 text-red-400" />
                                 )}
@@ -809,36 +812,46 @@ export default function Home() {
 
                           {isExpanded && (
                             <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
-                              {result?.userCode && (
-                                <div>
-                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
-                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
-                                    <code>{result.userCode}</code>
-                                  </pre>
+                              {result?.skipped ? (
+                                <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
+                                  <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                                  <p className="text-slate-400 font-medium">Question Skipped</p>
+                                  <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
                                 </div>
-                              )}
+                              ) : (
+                                <>
+                                  {result?.userCode && (
+                                    <div>
+                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                        <code>{result.userCode}</code>
+                                      </pre>
+                                    </div>
+                                  )}
 
-                              {result?.userOutput && (
-                                <div>
-                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
-                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
-                                    {result.userOutput}
-                                  </pre>
-                                </div>
-                              )}
+                                  {result?.userOutput && (
+                                    <div>
+                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                        {result.userOutput}
+                                      </pre>
+                                    </div>
+                                  )}
 
-                              {result?.feedback && (
-                                <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
-                                  <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
-                                  <p className="text-sm text-blue-200">{result.feedback}</p>
-                                </div>
-                              )}
+                                  {result?.feedback && (
+                                    <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                      <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                      <p className="text-sm text-blue-200">{result.feedback}</p>
+                                    </div>
+                                  )}
 
-                              {result?.suggestion && !result.correct && (
-                                <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
-                                  <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
-                                  <p className="text-sm text-yellow-200">{result.suggestion}</p>
-                                </div>
+                                  {result?.suggestion && !result.correct && (
+                                    <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                      <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                      <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -958,7 +971,10 @@ export default function Home() {
                                 {result?.correct ? (
                                   <CheckCircle className="w-5 h-5 text-green-400" />
                                 ) : result?.skipped ? (
-                                  <MinusCircle className="w-5 h-5 text-slate-500" />
+                                  <>
+                                    <span className="text-xs text-slate-500 font-medium">Skipped</span>
+                                    <MinusCircle className="w-5 h-5 text-slate-500" />
+                                  </>
                                 ) : (
                                   <XCircle className="w-5 h-5 text-red-400" />
                                 )}
@@ -969,36 +985,46 @@ export default function Home() {
 
                           {isExpanded && (
                             <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
-                              {result?.userCode && (
-                                <div>
-                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
-                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
-                                    <code>{result.userCode}</code>
-                                  </pre>
+                              {result?.skipped ? (
+                                <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
+                                  <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                                  <p className="text-slate-400 font-medium">Question Skipped</p>
+                                  <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
                                 </div>
-                              )}
+                              ) : (
+                                <>
+                                  {result?.userCode && (
+                                    <div>
+                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                        <code>{result.userCode}</code>
+                                      </pre>
+                                    </div>
+                                  )}
 
-                              {result?.userOutput && (
-                                <div>
-                                  <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
-                                  <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
-                                    {result.userOutput}
-                                  </pre>
-                                </div>
-                              )}
+                                  {result?.userOutput && (
+                                    <div>
+                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                        {result.userOutput}
+                                      </pre>
+                                    </div>
+                                  )}
 
-                              {result?.feedback && (
-                                <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
-                                  <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
-                                  <p className="text-sm text-blue-200">{result.feedback}</p>
-                                </div>
-                              )}
+                                  {result?.feedback && (
+                                    <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                      <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                      <p className="text-sm text-blue-200">{result.feedback}</p>
+                                    </div>
+                                  )}
 
-                              {result?.suggestion && !result.correct && (
-                                <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
-                                  <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
-                                  <p className="text-sm text-yellow-200">{result.suggestion}</p>
-                                </div>
+                                  {result?.suggestion && !result.correct && (
+                                    <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                      <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                      <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}

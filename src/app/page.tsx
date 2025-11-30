@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy, Menu, X, Zap, MinusCircle } from 'lucide-react';
+import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy, Menu, X, Zap, MinusCircle, Lock } from 'lucide-react';
 import { courseData } from '@/lib/course-content';
 import { usePyodide } from '@/hooks/usePyodide';
 import { DifficultyLevel, Exercise } from '@/lib/types';
@@ -194,7 +194,9 @@ export default function Home() {
   const currentSection = currentChapter.sections[currentSectionIndex];
   const isLastSection = currentSectionIndex === currentChapter.sections.length - 1;
   const isFirstSection = currentSectionIndex === 0;
-  const isLastChapter = currentChapterIndex === courseData.chapters.length - 1;
+  // Consider chapter as "last" if next chapter is coming soon or we're at the end
+  const nextChapter = courseData.chapters[currentChapterIndex + 1];
+  const isLastChapter = currentChapterIndex === courseData.chapters.length - 1 || nextChapter?.comingSoon;
   const isFirstChapter = currentChapterIndex === 0;
 
   // Get exercises filtered by difficulty
@@ -337,6 +339,9 @@ export default function Home() {
   };
 
   const navigateToSection = (chapterIdx: number, sectionIdx: number) => {
+    // Don't allow navigation to coming soon chapters
+    if (courseData.chapters[chapterIdx]?.comingSoon) return;
+    
     setCurrentChapterIndex(chapterIdx);
     setCurrentSectionIndex(sectionIdx);
     setCurrentExerciseIndex(0);
@@ -644,29 +649,44 @@ export default function Home() {
         <div className="p-4 space-y-4">
           {courseData.chapters.map((chapter, chapterIdx) => (
             <div key={chapter.id} className="space-y-2">
-              <div className="font-semibold text-blue-400 text-sm uppercase tracking-wider">
-                Chapter {chapterIdx + 1}: {chapter.title}
+              <div className={clsx(
+                "font-semibold text-sm uppercase tracking-wider flex items-center gap-2",
+                chapter.comingSoon ? "text-slate-500" : "text-blue-400"
+              )}>
+                <span>Chapter {chapterIdx + 1}: {chapter.title}</span>
+                {chapter.comingSoon && (
+                  <span className="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-normal normal-case">
+                    Coming Soon
+                  </span>
+                )}
               </div>
-              <div className="space-y-1 ml-2">
-                {chapter.sections.map((section, sectionIdx) => (
-                  <button
-                    key={section.id}
-                    onClick={() => navigateToSection(chapterIdx, sectionIdx)}
-                    className={clsx(
-                      "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
-                      chapterIdx === currentChapterIndex && sectionIdx === currentSectionIndex
-                        ? "bg-blue-600 text-white font-medium"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                    )}
-                  >
-                    {getSectionIcon(section.type)}
-                    <span className="flex-1">{section.title}</span>
-                    {section.type === 'exercises' && (
-                      <span className="text-xs opacity-70">15</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              {chapter.comingSoon ? (
+                <div className="ml-2 px-3 py-2 text-slate-600 text-sm flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  <span>{chapter.description}</span>
+                </div>
+              ) : (
+                <div className="space-y-1 ml-2">
+                  {chapter.sections.map((section, sectionIdx) => (
+                    <button
+                      key={section.id}
+                      onClick={() => navigateToSection(chapterIdx, sectionIdx)}
+                      className={clsx(
+                        "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
+                        chapterIdx === currentChapterIndex && sectionIdx === currentSectionIndex
+                          ? "bg-blue-600 text-white font-medium"
+                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                      )}
+                    >
+                      {getSectionIcon(section.type)}
+                      <span className="flex-1">{section.title}</span>
+                      {section.type === 'exercises' && (
+                        <span className="text-xs opacity-70">15</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

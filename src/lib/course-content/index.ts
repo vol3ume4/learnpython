@@ -9,6 +9,7 @@ import { whileLoopsChapter } from './chapters/07-while-loops';
 import { functionsBasicsChapter } from './chapters/08-functions-basics';
 import { functionsScopeChapter } from './chapters/09-functions-scope';
 import { listsBasicsChapter } from './chapters/10-lists-basics';
+import { comingSoonChapters } from './chapters/coming-soon';
 
 export const courseData: Course = {
     id: "python-foundations",
@@ -24,6 +25,7 @@ export const courseData: Course = {
         whileLoopsChapter,
         functionsBasicsChapter,
         functionsScopeChapter,
-        listsBasicsChapter
+        listsBasicsChapter,
+        ...comingSoonChapters
     ]
 };

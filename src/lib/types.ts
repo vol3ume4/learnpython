@@ -29,6 +29,7 @@ export type Chapter = {
     title: string;
     description: string;
     sections: Section[];
+    comingSoon?: boolean;
 };
 
 export type Course = {

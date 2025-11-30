@@ -233,19 +233,20 @@ export default function Home() {
   };
 
   const handleSkipQuizQuestion = () => {
-    setQuizResults(prev => [...prev, {
+    const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: false,
       skipped: true,
       question: quizQuestions[currentQuizQuestionIndex].question,
       userCode: code,
       userOutput: output.join('\n')
-    }]);
-    handleNextQuizQuestionLogic();
+    };
+    setQuizResults(prev => [...prev, newResult]);
+    handleNextQuizQuestionLogic([...quizResults, newResult]);
   };
 
   const handleNextQuizQuestion = () => {
-    setQuizResults(prev => [...prev, {
+    const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: true,
       skipped: false,
@@ -253,16 +254,48 @@ export default function Home() {
       question: quizQuestions[currentQuizQuestionIndex].question,
       userCode: code,
       userOutput: output.join('\n')
-    }]);
-    handleNextQuizQuestionLogic();
+    };
+    setQuizResults(prev => [...prev, newResult]);
+    handleNextQuizQuestionLogic([...quizResults, newResult]);
   };
 
-  const handleNextQuizQuestionLogic = () => {
+  const handleNextQuizQuestionLogic = async (updatedResults: typeof quizResults) => {
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuizQuestionIndex(prev => prev + 1);
       setIsCorrect(null);
       resetOutput();
     } else {
+      // Generate qualitative review for revision
+      setIsAiLoading(true);
+      try {
+        const answersToReview = updatedResults.map((result, index) => ({
+          questionId: result.questionId,
+          question: result.question,
+          userCode: result.userCode,
+          userOutput: result.userOutput,
+          expectedOutput: quizQuestions[index]?.expectedOutput || ''
+        }));
+
+        const reviewResponse = await fetch('/api/qualitative-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers: answersToReview,
+            chapterTitle: currentChapter.title
+          })
+        });
+
+        const reviewData = await reviewResponse.json();
+        if (reviewData.review) {
+          setQualitativeReview(reviewData.review);
+        }
+      } catch (reviewError) {
+        console.error('Qualitative review failed:', reviewError);
+        setQualitativeReview("Great effort on the revision! Keep practicing to strengthen your Python skills.");
+      } finally {
+        setIsAiLoading(false);
+      }
+      
       setQuizStage('revision_snapshot');
     }
   };
@@ -620,7 +653,7 @@ export default function Home() {
                         {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
                       </span>
                     </div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Revision Complete!</h2>
+                    <h2 className="text-3xl font-bold text-white mb-2">Revision Snapshot</h2>
                     {(() => {
                       const score = quizResults.filter(r => r.correct).length;
                       const total = quizQuestions.length;
@@ -632,6 +665,20 @@ export default function Home() {
                       return <p className="text-xl text-slate-400">Take your time and review the material! 🚀</p>;
                     })()}
                   </div>
+
+                  {qualitativeReview && (
+                    <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 bg-purple-500/20 rounded-lg">
+                          <Lightbulb className="w-6 h-6 text-purple-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
+                          <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
@@ -750,7 +797,7 @@ export default function Home() {
                         {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
                       </span>
                     </div>
-                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Complete! 🎉</h2>
+                    <h2 className="text-4xl font-bold text-white mb-3">Quiz Snapshot</h2>
                     {(() => {
                       const score = quizResults.filter(r => r.correct).length;
                       const total = quizQuestions.length;

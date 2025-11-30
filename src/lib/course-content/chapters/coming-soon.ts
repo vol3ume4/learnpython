@@ -1,14 +1,7 @@
 import { Chapter } from '../../types';
 
-// Chapters 11-20: Coming Soon
+// Chapters 12-20: Coming Soon
 export const comingSoonChapters: Chapter[] = [
-    {
-        id: "lists-advanced",
-        title: "Lists – Advanced",
-        description: "Advanced list operations, comprehensions, and techniques",
-        sections: [],
-        comingSoon: true
-    },
     {
         id: "tuples-basics",
         title: "Tuples – Basics & Usage",

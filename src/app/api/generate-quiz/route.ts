@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
             "While Loops",
             "Functions Basics",
             "Functions Scope",
-            "Lists Basics"
+            "Lists Basics",
+            "Lists Advanced"
         ];
 
         // Get only chapters covered so far (up to and including current chapter)

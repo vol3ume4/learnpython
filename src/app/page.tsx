@@ -409,55 +409,39 @@ export default function Home() {
       const data = await response.json();
       console.log('Batch evaluation response:', data);
 
-      let updatedResults;
-      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-        console.log('Using AI evaluation results:', data.results);
-        updatedResults = allResults.map((result, index) => {
-          const aiResult = data.results[index];
-          const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
-          const actual = (result.userOutput || '').trim().toLowerCase();
-          const outputMatches = actual === expected || 
-                               actual.includes(expected) || 
-                               expected.includes(actual);
-          
-          console.log(`Q${index + 1} comparison:`, { 
-            expected, 
-            actual, 
-            outputMatches, 
-            aiCorrect: aiResult?.correct 
-          });
-          
-          // If either AI says correct OR output matches, mark as correct
-          let finalCorrect = aiResult?.correct || outputMatches;
-          let finalFeedback = aiResult?.feedback || "";
-          
-          if (!aiResult?.correct && outputMatches) {
-            console.log(`Q${index + 1}: AI marked wrong but output matches - overriding to correct`);
-            finalFeedback = "Correct! Your output matches perfectly.";
-          }
-          
-          return {
-            ...result,
-            correct: finalCorrect,
-            feedback: finalFeedback,
-            suggestion: aiResult?.suggestion || ""
-          };
-        });
-      } else {
-        console.log('Falling back to simple comparison (no AI results or error)');
-        updatedResults = allResults.map((result, index) => {
-          const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
-          const actual = (result.userOutput || '').trim().toLowerCase();
-          const outputMatches = actual === expected || 
-                               actual.includes(expected) || 
-                               expected.includes(actual);
-          console.log(`Q${index + 1} fallback comparison:`, { expected, actual, outputMatches });
-          return {
-            ...result,
-            correct: outputMatches
-          };
-        });
-      }
+      // PRIMARY: Use output comparison for correctness (reliable)
+      // SECONDARY: Use Gemini only for feedback text (not for correct/incorrect)
+      updatedResults = allResults.map((result, index) => {
+        const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
+        const actual = (result.userOutput || '').trim().toLowerCase();
+        
+        // Simple, reliable output matching
+        const outputMatches = actual === expected || 
+                             actual.includes(expected) || 
+                             expected.includes(actual);
+        
+        // Get AI feedback if available, but DON'T use AI for correct/incorrect
+        const aiResult = data.results?.[index];
+        let feedback = "";
+        let suggestion = "";
+        
+        if (outputMatches) {
+          feedback = aiResult?.feedback || "Correct! Great job!";
+          suggestion = "";
+        } else {
+          feedback = aiResult?.feedback || "Output doesn't match expected result.";
+          suggestion = aiResult?.suggestion || `Expected: ${quizQuestions[index].expectedOutput}`;
+        }
+        
+        console.log(`Q${index + 1}: expected="${expected}", actual="${actual}", match=${outputMatches}`);
+        
+        return {
+          ...result,
+          correct: outputMatches,  // OUTPUT MATCH is the source of truth
+          feedback,
+          suggestion
+        };
+      });
       
       // Store final results for display
       setFinalResults(updatedResults);
@@ -495,16 +479,19 @@ export default function Home() {
 
     } catch (error) {
       console.error('Batch evaluation failed:', error);
-      // Fallback: use simple comparison
+      // Even if Gemini fails, we can still evaluate using output comparison
       const fallbackResults = allResults.map((result, index) => {
         const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
         const actual = (result.userOutput || '').trim().toLowerCase();
         const outputMatches = actual === expected || 
                              actual.includes(expected) || 
                              expected.includes(actual);
+        console.log(`Q${index + 1} (fallback): expected="${expected}", actual="${actual}", match=${outputMatches}`);
         return {
           ...result,
-          correct: outputMatches
+          correct: outputMatches,
+          feedback: outputMatches ? "Correct!" : "Output doesn't match expected result.",
+          suggestion: outputMatches ? "" : `Expected: ${quizQuestions[index].expectedOutput}`
         };
       });
       setFinalResults(fallbackResults);

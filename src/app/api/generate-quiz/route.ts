@@ -33,14 +33,19 @@ export async function POST(request: NextRequest) {
 
         const prompt = `Generate 10 Python exercises for the topic "${topic}" (Chapter: ${chapterTitle}).
         
-        CRITICAL CONSTRAINT - Topics Covered So Far:
-        The student has ONLY learned: ${coveredTopics}
+        CRITICAL CONSTRAINTS:
         
-        DO NOT use any concepts beyond these topics. For example:
-        - If they haven't learned functions yet, DON'T create questions requiring function definitions
-        - If they haven't learned loops yet, DON'T ask them to use for/while loops
-        - If they haven't learned lists yet, DON'T use list operations
-        - Only use concepts from the chapters listed above
+        1. Topics Covered So Far - The student has ONLY learned: ${coveredTopics}
+           - If they haven't learned functions yet, DON'T create questions requiring function definitions
+           - If they haven't learned loops yet, DON'T ask them to use for/while loops
+           - If they haven't learned lists yet, DON'T use list operations
+           - Only use concepts from the chapters listed above
+        
+        2. NO input() FUNCTION - This runs in browser, input() doesn't work!
+           - NEVER ask students to use input()
+           - Instead, use HARDCODED variables like: number = 5, name = "Alice", age = 25
+           - Example WRONG: "Ask the user for their age using input()"
+           - Example RIGHT: "Given age = 25, print whether they can vote"
         
         Requirements:
         1. ${mixInstruction}

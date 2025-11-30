@@ -1,0 +1,74 @@
+// Add this function after startMainQuiz (around line 291)
+
+  const batchEvaluateQuiz = async () => {
+    setIsAiLoading(true);
+    
+    try {
+      const answersToEvaluate = quizResults.map((result, index) => ({
+        questionId: result.questionId,
+        question: result.question,
+        userCode: result.userCode,
+        userOutput: result.userOutput,
+        expectedOutput: quizQuestions[index].expectedOutput
+      }));
+
+      const response = await fetch('/api/batch-evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: answersToEvaluate })
+      });
+
+      const data = await response.json();
+      
+      if (data.results && Array.isArray(data.results)) {
+        setQuizResults(prev => prev.map((result, index) => ({
+          ...result,
+          correct: data.results[index]?.correct || false,
+          feedback: data.results[index]?.feedback || "",
+          suggestion: data.results[index]?.suggestion || ""
+        })));
+      }
+    } catch (error) {
+      console.error('Batch evaluation failed:', error);
+      setQuizResults(prev => prev.map((result, index) => {
+        const expected = quizQuestions[index].expectedOutput.trim();
+        const actual = result.userOutput.trim();
+        return {
+          ...result,
+          correct: actual === expected || actual.includes(expected)
+        };
+      }));
+    } finally {
+      setIsAiLoading(false);
+      setQuizStage('quiz_snapshot');
+    }
+  };
+
+// REPLACE the entire handleSubmitQuiz function (lines 293-347) with this:
+
+  const handleSubmitQuiz = async () => {
+    if (!quizQuestions[currentQuizQuestionIndex]) return;
+
+    const exercise = quizQuestions[currentQuizQuestionIndex];
+
+    // Just store the answer without evaluation
+    setQuizResults(prev => [...prev, {
+      questionId: exercise.id,
+      correct: false,
+      skipped: false,
+      feedback: "",
+      suggestion: "",
+      question: exercise.question,
+      userCode: code,
+      userOutput: output.join('\n')
+    }]);
+
+    if (currentQuizQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuizQuestionIndex(prev => prev + 1);
+      setIsCorrect(null);
+      resetOutput();
+    } else {
+      // Last question - trigger batch evaluation
+      await batchEvaluateQuiz();
+    }
+  };

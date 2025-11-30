@@ -30,27 +30,15 @@ Result: ${ans.correct ? 'Correct âœ“' : (ans.skipped ? 'Skipped' : 'Incorrect âœ
 
 ${answersContext}
 
-Write a qualitative, personalized review (200-250 words) that:
+Write a SHORT, qualitative review (MAX 40 words / 50 tokens) that:
 
-1. **Find the GOOD in every attempt** - Even in incorrect answers, identify what they tried to do right. Did they use the right function? Good variable names? Correct syntax? Acknowledge partial understanding.
+1. Identify 1-2 specific strengths in their code (syntax, functions used, patterns)
+2. Note 1 growth area constructively
+3. Be warm and encouraging
 
-2. **Acknowledge specific strengths** - What concepts did they demonstrate well? Point to actual code patterns they used correctly across questions.
+Focus on CODE observations. Example: "Strong use of print() and variables! Work on comparison operators (< vs >). You're writing valid Python - keep practicing!"
 
-3. **Identify growth areas constructively** - What specific concepts need more practice? Be precise (e.g., "string indexing" not just "strings"). Frame it as "next steps" not "failures".
-
-4. **Provide actionable next steps** - What specific exercises or concepts should they practice?
-
-5. **Maintain genuine encouragement** - Be positive and constructive. Celebrate attempts and effort.
-
-CRITICAL: Focus on CODE-LEVEL observations, not just correct/incorrect. Look at their actual code and find good things:
-- "You used print() correctly in every attempt - that's solid!"
-- "I see you understand variable assignment well, even when the logic needs work"
-- "Your code runs without syntax errors - you're writing valid Python!"
-
-Example review:
-"Great effort on this quiz! I noticed you have a strong grasp of print statements - you used them correctly in all 10 questions. Your variable naming is clear and meaningful, which shows good programming practice. In questions 3, 5, and 8, you attempted the right approach but the logic needs fine-tuning. For example, in Q5, you correctly identified you need a comparison, you just mixed up > and <. That's close! For your next practice: focus on comparison operators and when to use each one. You're on the right track - keep coding!"
-
-Write in a warm, friendly, conversational tone. Use "you" and "your". Be specific and genuine.`;
+Keep it BRIEF and friendly.`;
 
         const result = await model.generateContent(prompt);
         const reviewText = result.response.text();

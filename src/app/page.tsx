@@ -273,7 +273,9 @@ export default function Home() {
           question: result.question,
           userCode: result.userCode,
           userOutput: result.userOutput,
-          expectedOutput: quizQuestions[index]?.expectedOutput || ''
+          expectedOutput: quizQuestions[index]?.expectedOutput || '',
+          correct: result.correct || false,
+          feedback: result.feedback || ''
         }));
 
         const reviewResponse = await fetch('/api/qualitative-review', {
@@ -354,9 +356,11 @@ export default function Home() {
       });
 
       const data = await response.json();
+      console.log('Batch evaluation response:', data);
 
       let updatedResults;
-      if (data.results && Array.isArray(data.results)) {
+      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+        console.log('Using AI evaluation results');
         updatedResults = quizResults.map((result, index) => ({
           ...result,
           correct: data.results[index]?.correct || false,
@@ -365,6 +369,7 @@ export default function Home() {
         }));
         setQuizResults(updatedResults);
       } else {
+        console.log('Falling back to simple comparison');
         updatedResults = quizResults.map((result, index) => {
           const expected = quizQuestions[index].expectedOutput.trim();
           const actual = (result.userOutput || '').trim();
@@ -376,13 +381,23 @@ export default function Home() {
         setQuizResults(updatedResults);
       }
 
-      // Generate qualitative review
+      // Generate qualitative review using evaluated results
       try {
+        const answersWithEvaluation = updatedResults.map((result, index) => ({
+          questionId: result.questionId,
+          question: result.question,
+          userCode: result.userCode,
+          userOutput: result.userOutput,
+          expectedOutput: quizQuestions[index].expectedOutput,
+          correct: result.correct,
+          feedback: result.feedback
+        }));
+
         const reviewResponse = await fetch('/api/qualitative-review', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            answers: answersToEvaluate,
+            answers: answersWithEvaluation,
             chapterTitle: currentChapter.title
           })
         });

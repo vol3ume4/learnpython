@@ -502,18 +502,56 @@ export default function Home() {
     }
   };
 
+  // Background evaluation for a single quiz question using Gemini
+  const evaluateQuizQuestionInBackground = async (
+    questionIndex: number,
+    exercise: Exercise,
+    userCode: string,
+    userOutput: string
+  ) => {
+    try {
+      console.log(`Background Gemini eval starting for Q${questionIndex + 1}`);
+      
+      const response = await fetch('/api/analyze-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: userCode,
+          question: exercise.question,
+          output: userOutput,
+          expectedOutput: exercise.expectedOutput
+        })
+      });
+
+      const data = await response.json();
+      console.log(`Background Gemini eval result for Q${questionIndex + 1}:`, data);
+
+      // Update the specific result in quizResults and finalResults
+      const updateResult = (prev: typeof quizResults) => prev.map((r, idx) => 
+        idx === questionIndex 
+          ? { ...r, correct: data.correct ?? false, feedback: data.feedback || "", suggestion: data.suggestion || "" }
+          : r
+      );
+      
+      setQuizResults(updateResult);
+      setFinalResults(updateResult);
+
+    } catch (error) {
+      console.error(`Background Gemini eval failed for Q${questionIndex + 1}:`, error);
+    }
+  };
+
   const handleSubmitQuiz = async () => {
     if (!quizQuestions[currentQuizQuestionIndex]) return;
 
     const exercise = quizQuestions[currentQuizQuestionIndex];
+    const questionIndex = currentQuizQuestionIndex;
 
-    console.log('Submitting quiz answer for Q', currentQuizQuestionIndex + 1);
-    console.log('Code:', code);
-    console.log('Output:', output.join('\n'));
+    console.log('Submitting quiz answer for Q', questionIndex + 1);
 
     const newResult = {
       questionId: exercise.id,
-      correct: false, // Will be evaluated in batch
+      correct: false, // Will be evaluated in background by Gemini
       skipped: false,
       feedback: "",
       suggestion: "",
@@ -521,21 +559,57 @@ export default function Home() {
       userCode: code,
       userOutput: output.join('\n')
     };
-    
-    console.log('Storing quiz result:', newResult);
 
-    // Just store the answer without evaluation
-    setQuizResults(prev => [...prev, newResult]);
+    // Store the answer immediately
+    const allResults = [...quizResults, newResult];
+    setQuizResults(allResults);
+    setFinalResults(allResults);
+
+    // Start background Gemini evaluation (don't await - runs async while user continues)
+    evaluateQuizQuestionInBackground(questionIndex, exercise, code, output.join('\n'));
 
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
+      // Move to next question immediately (Gemini evaluation happens in background)
       setCurrentQuizQuestionIndex(prev => prev + 1);
       setIsCorrect(null);
       resetOutput();
     } else {
-      // Last question - trigger batch evaluation with ALL results
-      const allResults = [...quizResults, newResult];
-      console.log('Last quiz question - triggering batch evaluation with', allResults.length, 'results');
-      await batchEvaluateQuiz(allResults);
+      // Last question - show loading while we wait for evaluations to complete
+      setIsAiLoading(true);
+      
+      // Wait for background evaluations to complete (they run in parallel)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Generate qualitative review using the evaluated results
+      try {
+        const reviewResponse = await fetch('/api/qualitative-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers: allResults.map((r, idx) => ({
+              questionId: r.questionId,
+              question: r.question,
+              userCode: r.userCode,
+              userOutput: r.userOutput,
+              expectedOutput: quizQuestions[idx]?.expectedOutput || '',
+              correct: r.correct,
+              feedback: r.feedback
+            })),
+            chapterTitle: currentChapter.title
+          })
+        });
+        
+        const reviewData = await reviewResponse.json();
+        if (reviewData.review) {
+          setQualitativeReview(reviewData.review);
+        }
+      } catch (error) {
+        console.error('Qualitative review failed:', error);
+        setQualitativeReview("Great work completing the quiz! Keep practicing.");
+      }
+      
+      setIsAiLoading(false);
+      setQuizStage('quiz_snapshot');
     }
   };
 

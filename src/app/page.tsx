@@ -846,9 +846,19 @@ export default function Home() {
                         {quizQuestions[currentQuizQuestionIndex].level.toUpperCase()}
                       </span>
                     </div>
-                    <p className="mb-6 text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">
-                      {quizQuestions[currentQuizQuestionIndex].question}
-                    </p>
+                    <div className="mb-6 text-slate-300 text-lg leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          p: ({children}) => <span>{children}</span>,
+                          code: ({children}) => (
+                            <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
+                          ),
+                          strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                        }}
+                      >
+                        {quizQuestions[currentQuizQuestionIndex].question}
+                      </ReactMarkdown>
+                    </div>
 
                     <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-800">
                       <button
@@ -1319,9 +1329,19 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <p className="mb-6 text-slate-300 text-lg leading-relaxed">
-                      {currentExercise.question}
-                    </p>
+                    <div className="mb-6 text-slate-300 text-lg leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          p: ({children}) => <span>{children}</span>,
+                          code: ({children}) => (
+                            <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
+                          ),
+                          strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                        }}
+                      >
+                        {currentExercise.question}
+                      </ReactMarkdown>
+                    </div>
 
                     {showHint && (
                       <div className="mb-4 p-4 bg-blue-950/30 border border-blue-900/50 rounded-lg text-blue-200 flex items-start gap-3">

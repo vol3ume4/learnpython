@@ -267,7 +267,8 @@ export default function Home() {
         body: JSON.stringify({
           topic: currentChapter.description,
           chapterTitle: currentChapter.title,
-          difficulty: quizDifficulty
+          difficulty: quizDifficulty,
+          chapterIndex: currentChapterIndex
         })
       });
 

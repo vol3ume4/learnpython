@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.N
 
 export async function POST(request: NextRequest) {
     try {
-        const { topic, chapterTitle, difficulty } = await request.json();
+        const { topic, chapterTitle, difficulty, chapterIndex } = await request.json();
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         let mixInstruction = "Mix: 3 Easy, 4 Medium, 3 Hard.";
@@ -13,7 +13,34 @@ export async function POST(request: NextRequest) {
         if (difficulty === 'medium') mixInstruction = "10 Medium questions.";
         if (difficulty === 'hard') mixInstruction = "10 Hard questions.";
 
+        // Define all chapters in order
+        const allChapters = [
+            "Variables",
+            "Math Operators", 
+            "Data Types",
+            "Strings",
+            "If Statements",
+            "For Loops",
+            "While Loops",
+            "Functions Basics",
+            "Functions Scope",
+            "Lists Basics"
+        ];
+
+        // Get only chapters covered so far (up to and including current chapter)
+        const coveredChapters = allChapters.slice(0, (chapterIndex || 0) + 1);
+        const coveredTopics = coveredChapters.join(", ");
+
         const prompt = `Generate 10 Python exercises for the topic "${topic}" (Chapter: ${chapterTitle}).
+        
+        CRITICAL CONSTRAINT - Topics Covered So Far:
+        The student has ONLY learned: ${coveredTopics}
+        
+        DO NOT use any concepts beyond these topics. For example:
+        - If they haven't learned functions yet, DON'T create questions requiring function definitions
+        - If they haven't learned loops yet, DON'T ask them to use for/while loops
+        - If they haven't learned lists yet, DON'T use list operations
+        - Only use concepts from the chapters listed above
         
         Requirements:
         1. ${mixInstruction}

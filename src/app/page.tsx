@@ -290,48 +290,62 @@ export default function Home() {
     }
   };
 
+  const batchEvaluateQuiz = async () => {
+    setIsAiLoading(true);
+
+    try {
+      const answersToEvaluate = quizResults.map((result, index) => ({
+        questionId: result.questionId,
+        question: result.question,
+        userCode: result.userCode,
+        userOutput: result.userOutput,
+        expectedOutput: quizQuestions[index].expectedOutput
+      }));
+
+      const response = await fetch('/api/batch-evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: answersToEvaluate })
+      });
+
+      const data = await response.json();
+
+      if (data.results && Array.isArray(data.results)) {
+        setQuizResults(prev => prev.map((result, index) => ({
+          ...result,
+          correct: data.results[index]?.correct || false,
+          feedback: data.results[index]?.feedback || "",
+          suggestion: data.results[index]?.suggestion || ""
+        })));
+      }
+    } catch (error) {
+      console.error('Batch evaluation failed:', error);
+      setQuizResults(prev => prev.map((result, index) => {
+        const expected = quizQuestions[index].expectedOutput.trim();
+        const actual = (result.userOutput || '').trim();
+        return {
+          ...result,
+          correct: actual === expected || actual.includes(expected)
+        };
+      }));
+    } finally {
+      setIsAiLoading(false);
+      setQuizStage('quiz_snapshot');
+    }
+  };
+
   const handleSubmitQuiz = async () => {
     if (!quizQuestions[currentQuizQuestionIndex]) return;
 
     const exercise = quizQuestions[currentQuizQuestionIndex];
 
-    setIsAiLoading(true);
-    let isCorrect = false;
-    let feedback = "";
-    let suggestion = "";
-
-    try {
-      const response = await fetch('/api/analyze-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          question: exercise.question,
-          output: output.join('\n'),
-          expectedOutput: exercise.expectedOutput
-        })
-      });
-
-      const data = await response.json();
-      isCorrect = data.correct !== undefined ? data.correct : false;
-      feedback = data.feedback || "";
-      suggestion = data.suggestion || "";
-    } catch (error) {
-      console.error('AI evaluation failed:', error);
-      // Fallback to simple comparison
-      const expected = exercise.expectedOutput.trim();
-      const actual = output.join('\n').trim();
-      isCorrect = actual === expected || actual.includes(expected);
-    } finally {
-      setIsAiLoading(false);
-    }
-
+    // Just store the answer without evaluation
     setQuizResults(prev => [...prev, {
       questionId: exercise.id,
-      correct: isCorrect,
+      correct: false, // Will be evaluated in batch
       skipped: false,
-      feedback: feedback,
-      suggestion: suggestion || "",
+      feedback: "",
+      suggestion: "",
       question: exercise.question,
       userCode: code,
       userOutput: output.join('\n')
@@ -342,7 +356,8 @@ export default function Home() {
       setIsCorrect(null);
       resetOutput();
     } else {
-      setQuizStage('quiz_snapshot');
+      // Last question - trigger batch evaluation
+      await batchEvaluateQuiz();
     }
   };
 

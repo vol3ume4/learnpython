@@ -155,14 +155,24 @@ export default function Home() {
         console.log('Setting isCorrect to:', data.correct);
         
         // Double-check: if AI says incorrect but output actually matches, override
-        const expected = exercise.expectedOutput.trim();
-        const actual = output.join('\n').trim();
-        const outputMatches = actual === expected || actual.includes(expected);
+        const expected = exercise.expectedOutput.trim().toLowerCase();
+        const actual = output.join('\n').trim().toLowerCase();
+        const outputMatches = actual === expected || 
+                             actual.includes(expected) || 
+                             expected.includes(actual);
+        
+        console.log('Comparison:', { expected, actual, outputMatches, aiCorrect: data.correct });
         
         if (!data.correct && outputMatches) {
           console.log('AI marked wrong but output matches - overriding to correct');
           setIsCorrect(true);
           setAiFeedback("Great! Your output is correct! 🎉");
+        } else if (data.correct || outputMatches) {
+          // If either AI says correct OR output matches, mark as correct
+          setIsCorrect(true);
+          if (data.feedback) {
+            setAiFeedback(data.feedback + (data.suggestion ? '\n\n💡 ' + data.suggestion : ''));
+          }
         } else {
           setIsCorrect(data.correct);
           if (data.feedback) {
@@ -258,6 +268,8 @@ export default function Home() {
   };
 
   const handleNextQuizQuestion = () => {
+    console.log('Storing revision result - isCorrect:', isCorrect, 'for question:', currentQuizQuestionIndex + 1);
+    
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: isCorrect === true, // Use actual evaluation result, not hardcoded true
@@ -267,6 +279,8 @@ export default function Home() {
       userCode: code,
       userOutput: output.join('\n')
     };
+    
+    console.log('Result being stored:', newResult);
     setQuizResults(prev => [...prev, newResult]);
     handleNextQuizQuestionLogic([...quizResults, newResult]);
   };
@@ -276,7 +290,11 @@ export default function Home() {
       setCurrentQuizQuestionIndex(prev => prev + 1);
       setIsCorrect(null);
       resetOutput();
+      setAiFeedback(null);
     } else {
+      // Log all results before generating review
+      console.log('Revision complete. Results:', updatedResults);
+      
       // Generate qualitative review for revision
       setIsAiLoading(true);
       try {
@@ -289,6 +307,8 @@ export default function Home() {
           correct: result.correct || false,
           feedback: result.feedback || ''
         }));
+        
+        console.log('Sending to qualitative review:', answersToReview);
 
         const reviewResponse = await fetch('/api/qualitative-review', {
           method: 'POST',
@@ -375,17 +395,25 @@ export default function Home() {
         console.log('Using AI evaluation results');
         updatedResults = quizResults.map((result, index) => {
           const aiResult = data.results[index];
-          const expected = quizQuestions[index].expectedOutput.trim();
-          const actual = (result.userOutput || '').trim();
-          const outputMatches = actual === expected || actual.includes(expected);
+          const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
+          const actual = (result.userOutput || '').trim().toLowerCase();
+          const outputMatches = actual === expected || 
+                               actual.includes(expected) || 
+                               expected.includes(actual);
           
-          // Double-check: if AI says incorrect but output matches, override
-          let finalCorrect = aiResult?.correct || false;
+          console.log(`Q${index + 1} comparison:`, { 
+            expected, 
+            actual, 
+            outputMatches, 
+            aiCorrect: aiResult?.correct 
+          });
+          
+          // If either AI says correct OR output matches, mark as correct
+          let finalCorrect = aiResult?.correct || outputMatches;
           let finalFeedback = aiResult?.feedback || "";
           
-          if (!finalCorrect && outputMatches) {
+          if (!aiResult?.correct && outputMatches) {
             console.log(`Q${index + 1}: AI marked wrong but output matches - overriding to correct`);
-            finalCorrect = true;
             finalFeedback = "Correct! Your output matches perfectly.";
           }
           
@@ -400,11 +428,14 @@ export default function Home() {
       } else {
         console.log('Falling back to simple comparison');
         updatedResults = quizResults.map((result, index) => {
-          const expected = quizQuestions[index].expectedOutput.trim();
-          const actual = (result.userOutput || '').trim();
+          const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
+          const actual = (result.userOutput || '').trim().toLowerCase();
+          const outputMatches = actual === expected || 
+                               actual.includes(expected) || 
+                               expected.includes(actual);
           return {
             ...result,
-            correct: actual === expected || actual.includes(expected)
+            correct: outputMatches
           };
         });
         setQuizResults(updatedResults);
@@ -461,8 +492,11 @@ export default function Home() {
 
     const exercise = quizQuestions[currentQuizQuestionIndex];
 
-    // Just store the answer without evaluation
-    setQuizResults(prev => [...prev, {
+    console.log('Submitting quiz answer for Q', currentQuizQuestionIndex + 1);
+    console.log('Code:', code);
+    console.log('Output:', output.join('\n'));
+
+    const newResult = {
       questionId: exercise.id,
       correct: false, // Will be evaluated in batch
       skipped: false,
@@ -471,7 +505,12 @@ export default function Home() {
       question: exercise.question,
       userCode: code,
       userOutput: output.join('\n')
-    }]);
+    };
+    
+    console.log('Storing quiz result:', newResult);
+
+    // Just store the answer without evaluation
+    setQuizResults(prev => [...prev, newResult]);
 
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuizQuestionIndex(prev => prev + 1);
@@ -479,6 +518,9 @@ export default function Home() {
       resetOutput();
     } else {
       // Last question - trigger batch evaluation
+      console.log('Last quiz question - triggering batch evaluation');
+      const allResults = [...quizResults, newResult];
+      console.log('All quiz results before evaluation:', allResults);
       await batchEvaluateQuiz();
     }
   };

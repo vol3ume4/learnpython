@@ -401,7 +401,11 @@ export default function Home() {
         />
       )}
 
-<div className="flex justify-between items-start mb-2">
+      {/* Left Panel: Content */}
+      <div className="w-1/2 flex flex-col border-r border-slate-800">
+        {/* Header */}
+        <header className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900/80 to-slate-800/50">
+          <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowTOC(true)}

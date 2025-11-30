@@ -711,7 +711,7 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto p-8">
           {/* Theory Section */}
           {currentSection.type === 'theory' && currentSection.content && (
-            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-p:text-slate-300 prose-strong:text-white prose-code:text-blue-400 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-table:border-collapse prose-th:border prose-th:border-slate-700 prose-th:bg-slate-800 prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-slate-700 prose-td:px-3 prose-td:py-2">
+            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-headings:mt-8 prose-headings:mb-4 prose-p:text-slate-300 prose-p:mb-6 prose-p:leading-relaxed prose-strong:text-white prose-code:text-blue-400 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-pre:my-6 prose-ul:my-4 prose-ul:space-y-2 prose-ol:my-4 prose-ol:space-y-2 prose-li:text-slate-300 prose-table:border-collapse prose-table:my-6 prose-th:border prose-th:border-slate-700 prose-th:bg-slate-800 prose-th:px-4 prose-th:py-3 prose-td:border prose-td:border-slate-700 prose-td:px-4 prose-td:py-3">
               <ReactMarkdown>{currentSection.content}</ReactMarkdown>
             </div>
           )}

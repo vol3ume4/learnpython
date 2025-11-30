@@ -94,7 +94,7 @@ export default function Home() {
 
   // Get exercises filtered by difficulty
   const currentExercises = currentSection.type === 'exercises' && currentSection.exercises
-    ? currentSection.exercises.filter(ex => ex.level === selectedDifficulty)
+    ? currentSection.exercises.filter((ex: Exercise) => ex.level === selectedDifficulty)
     : [];
 
   const currentExercise = currentExercises[currentExerciseIndex];
@@ -799,7 +799,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                
+
                 {currentExercise && (
                   <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -975,7 +975,7 @@ export default function Home() {
                   Run Code
                 </button>
 
-{((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
+                {((currentSection.type === 'exercises' && currentExercise) || (quizStage === 'revision' && quizQuestions[currentQuizQuestionIndex])) && (
                   <button
                     onClick={handleCheck}
                     disabled={isAiLoading}
@@ -991,7 +991,7 @@ export default function Home() {
                     )}
                   </button>
                 )}
-                
+
                 {/* AI Help Buttons */}
                 {output.some(line => line.includes("Error")) && (
                   <button

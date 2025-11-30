@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import ReactMarkdown from 'react-markdown';
 import { Play, ChevronRight, ChevronLeft, CheckCircle, XCircle, RotateCcw, Lightbulb, BookOpen, Code2, Trophy, Menu, X, Zap, MinusCircle, Lock } from 'lucide-react';
 import { courseData } from '@/lib/course-content';
 import { usePyodide } from '@/hooks/usePyodide';
@@ -709,11 +710,9 @@ export default function Home() {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-8">
           {/* Theory Section */}
-          {currentSection.type === 'theory' && (
-            <div className="prose prose-invert max-w-none">
-              <div className="text-lg leading-relaxed text-slate-300 whitespace-pre-wrap">
-                {currentSection.content}
-              </div>
+          {currentSection.type === 'theory' && currentSection.content && (
+            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-p:text-slate-300 prose-strong:text-white prose-code:text-blue-400 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-table:border-collapse prose-th:border prose-th:border-slate-700 prose-th:bg-slate-800 prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-slate-700 prose-td:px-3 prose-td:py-2">
+              <ReactMarkdown>{currentSection.content}</ReactMarkdown>
             </div>
           )}
 

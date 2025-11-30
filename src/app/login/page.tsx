@@ -26,14 +26,14 @@ export default function LoginPage() {
                 });
                 if (error) throw error;
                 // Auto sign-in happens if email confirmation is disabled
-                router.push('/dashboard');
+                router.push('/');
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
                 if (error) throw error;
-                router.push('/dashboard');
+                router.push('/');
             }
         } catch (err: any) {
             setError(err.message);

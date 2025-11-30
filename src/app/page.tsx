@@ -306,11 +306,13 @@ export default function Home() {
       setAiFeedback(null);
     } else {
       // IMPORTANT: Store final results BEFORE transitioning
-      console.log('Revision complete. Final results:', allResults);
+      console.log('Questions complete. Final results:', allResults);
       setFinalResults(allResults);
       
-      // Transition to snapshot first, then generate review
-      setQuizStage('revision_snapshot');
+      // Use correct snapshot stage based on current stage
+      const snapshotStage = quizStage === 'quiz' ? 'quiz_snapshot' : 'revision_snapshot';
+      console.log('Transitioning to:', snapshotStage);
+      setQuizStage(snapshotStage);
       
       // Generate qualitative review
       setIsAiLoading(true);

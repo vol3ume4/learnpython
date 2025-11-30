@@ -49,17 +49,23 @@ Return ONLY a valid JSON array with ${answers.length} objects in order (no markd
   ...
 ]`;
 
+        console.log('Sending batch evaluation to Gemini for', answers.length, 'questions');
+        
         const result = await model.generateContent(batchPrompt);
         const response = result.response;
         const text = response.text();
 
+        console.log('Gemini raw response:', text.substring(0, 500));
+
         // Extract JSON from response
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
+            console.error('Could not find JSON array in response');
             throw new Error('Could not parse AI response');
         }
 
         const results = JSON.parse(jsonMatch[0]);
+        console.log('Parsed results:', results);
 
         return Response.json({ results });
     } catch (error) {

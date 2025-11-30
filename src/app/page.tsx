@@ -386,11 +386,13 @@ export default function Home() {
     }
   };
 
-  const batchEvaluateQuiz = async () => {
+  const batchEvaluateQuiz = async (allResults: typeof quizResults) => {
     setIsAiLoading(true);
+    
+    console.log('batchEvaluateQuiz called with', allResults.length, 'results');
 
     try {
-      const answersToEvaluate = quizResults.map((result, index) => ({
+      const answersToEvaluate = allResults.map((result, index) => ({
         questionId: result.questionId,
         question: result.question,
         userCode: result.userCode,
@@ -409,8 +411,8 @@ export default function Home() {
 
       let updatedResults;
       if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-        console.log('Using AI evaluation results');
-        updatedResults = quizResults.map((result, index) => {
+        console.log('Using AI evaluation results:', data.results);
+        updatedResults = allResults.map((result, index) => {
           const aiResult = data.results[index];
           const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
           const actual = (result.userOutput || '').trim().toLowerCase();
@@ -441,22 +443,25 @@ export default function Home() {
             suggestion: aiResult?.suggestion || ""
           };
         });
-        setQuizResults(updatedResults);
       } else {
-        console.log('Falling back to simple comparison');
-        updatedResults = quizResults.map((result, index) => {
+        console.log('Falling back to simple comparison (no AI results or error)');
+        updatedResults = allResults.map((result, index) => {
           const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
           const actual = (result.userOutput || '').trim().toLowerCase();
           const outputMatches = actual === expected || 
                                actual.includes(expected) || 
                                expected.includes(actual);
+          console.log(`Q${index + 1} fallback comparison:`, { expected, actual, outputMatches });
           return {
             ...result,
             correct: outputMatches
           };
         });
-        setQuizResults(updatedResults);
       }
+      
+      // Store final results for display
+      setFinalResults(updatedResults);
+      setQuizResults(updatedResults);
 
       // Generate qualitative review using evaluated results
       try {
@@ -490,14 +495,20 @@ export default function Home() {
 
     } catch (error) {
       console.error('Batch evaluation failed:', error);
-      setQuizResults(prev => prev.map((result, index) => {
-        const expected = quizQuestions[index].expectedOutput.trim();
-        const actual = (result.userOutput || '').trim();
+      // Fallback: use simple comparison
+      const fallbackResults = allResults.map((result, index) => {
+        const expected = quizQuestions[index].expectedOutput.trim().toLowerCase();
+        const actual = (result.userOutput || '').trim().toLowerCase();
+        const outputMatches = actual === expected || 
+                             actual.includes(expected) || 
+                             expected.includes(actual);
         return {
           ...result,
-          correct: actual === expected || actual.includes(expected)
+          correct: outputMatches
         };
-      }));
+      });
+      setFinalResults(fallbackResults);
+      setQuizResults(fallbackResults);
     } finally {
       setIsAiLoading(false);
       setQuizStage('quiz_snapshot');
@@ -534,11 +545,10 @@ export default function Home() {
       setIsCorrect(null);
       resetOutput();
     } else {
-      // Last question - trigger batch evaluation
-      console.log('Last quiz question - triggering batch evaluation');
+      // Last question - trigger batch evaluation with ALL results
       const allResults = [...quizResults, newResult];
-      console.log('All quiz results before evaluation:', allResults);
-      await batchEvaluateQuiz();
+      console.log('Last quiz question - triggering batch evaluation with', allResults.length, 'results');
+      await batchEvaluateQuiz(allResults);
     }
   };
 
@@ -926,11 +936,13 @@ export default function Home() {
               )}
 
               {quizStage === 'quiz_snapshot' && (() => {
+                // Use finalResults for quiz snapshot (set during batch evaluation)
+                const resultsToShow = finalResults.length > 0 ? finalResults : quizResults;
                 console.log('=== QUIZ SNAPSHOT DISPLAY ===');
-                console.log('Quiz Results:', quizResults);
-                console.log('Correct count:', quizResults.filter(r => r.correct).length);
+                console.log('Final Results:', resultsToShow);
+                console.log('Correct count:', resultsToShow.filter(r => r.correct).length);
                 console.log('Total questions:', quizQuestions.length);
-                quizResults.forEach((r, i) => {
+                resultsToShow.forEach((r, i) => {
                   console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
                 });
                 return true;
@@ -939,12 +951,13 @@ export default function Home() {
                   <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
                       <span className="text-5xl font-bold text-white">
-                        {Math.round((quizResults.filter(r => r.correct).length / quizQuestions.length) * 100)}%
+                        {Math.round(((finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length / quizQuestions.length) * 100)}%
                       </span>
                     </div>
                     <h2 className="text-4xl font-bold text-white mb-3">Quiz Snapshot</h2>
                     {(() => {
-                      const score = quizResults.filter(r => r.correct).length;
+                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                      const score = resultsToUse.filter(r => r.correct).length;
                       const total = quizQuestions.length;
                       const percentage = (score / total) * 100;
 
@@ -972,7 +985,8 @@ export default function Home() {
 
                   <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
-                      const result = quizResults.find(r => r.questionId === q.id);
+                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                      const result = resultsToUse.find(r => r.questionId === q.id);
                       const isExpanded = expandedQuestions[q.id] || false;
 
                       return (

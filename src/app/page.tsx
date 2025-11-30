@@ -27,7 +27,9 @@ export default function Home() {
   const [quizQuestions, setQuizQuestions] = useState<Exercise[]>([]);
   const [currentQuizQuestionIndex, setCurrentQuizQuestionIndex] = useState(0);
   const [quizResults, setQuizResults] = useState<{ questionId: string, correct: boolean, skipped: boolean, feedback?: string, suggestion?: string, question?: string, userCode?: string, userOutput?: string }[]>([]);
+  const [finalResults, setFinalResults] = useState<typeof quizResults>([]); // Stable results for snapshot display
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [hasCheckedAnswer, setHasCheckedAnswer] = useState(false); // Track if Check Answer was clicked
   const [showTOC, setShowTOC] = useState(false);
   const router = useRouter();
 
@@ -163,6 +165,9 @@ export default function Home() {
         
         console.log('Comparison:', { expected, actual, outputMatches, aiCorrect: data.correct });
         
+        // Mark that Check Answer was clicked (disables Skip button)
+        setHasCheckedAnswer(true);
+        
         if (!data.correct && outputMatches) {
           console.log('AI marked wrong but output matches - overriding to correct');
           setIsCorrect(true);
@@ -255,6 +260,9 @@ export default function Home() {
   };
 
   const handleSkipQuizQuestion = () => {
+    // Only allow skip if Check Answer hasn't been clicked
+    if (hasCheckedAnswer) return;
+    
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: false,
@@ -263,8 +271,9 @@ export default function Home() {
       userCode: code,
       userOutput: output.join('\n')
     };
-    setQuizResults(prev => [...prev, newResult]);
-    handleNextQuizQuestionLogic([...quizResults, newResult]);
+    const allResults = [...quizResults, newResult];
+    setQuizResults(allResults);
+    handleNextQuizQuestionLogic(allResults);
   };
 
   const handleNextQuizQuestion = () => {
@@ -272,7 +281,7 @@ export default function Home() {
     
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
-      correct: isCorrect === true, // Use actual evaluation result, not hardcoded true
+      correct: isCorrect === true,
       skipped: false,
       feedback: aiFeedback || "",
       question: quizQuestions[currentQuizQuestionIndex].question,
@@ -281,24 +290,32 @@ export default function Home() {
     };
     
     console.log('Result being stored:', newResult);
-    setQuizResults(prev => [...prev, newResult]);
-    handleNextQuizQuestionLogic([...quizResults, newResult]);
+    const allResults = [...quizResults, newResult];
+    setQuizResults(allResults);
+    handleNextQuizQuestionLogic(allResults);
   };
 
-  const handleNextQuizQuestionLogic = async (updatedResults: typeof quizResults) => {
+  const handleNextQuizQuestionLogic = async (allResults: typeof quizResults) => {
+    // Reset for next question
+    setHasCheckedAnswer(false);
+    
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuizQuestionIndex(prev => prev + 1);
       setIsCorrect(null);
       resetOutput();
       setAiFeedback(null);
     } else {
-      // Log all results before generating review
-      console.log('Revision complete. Results:', updatedResults);
+      // IMPORTANT: Store final results BEFORE transitioning
+      console.log('Revision complete. Final results:', allResults);
+      setFinalResults(allResults);
       
-      // Generate qualitative review for revision
+      // Transition to snapshot first, then generate review
+      setQuizStage('revision_snapshot');
+      
+      // Generate qualitative review
       setIsAiLoading(true);
       try {
-        const answersToReview = updatedResults.map((result, index) => ({
+        const answersToReview = allResults.map((result, index) => ({
           questionId: result.questionId,
           question: result.question,
           userCode: result.userCode,
@@ -329,8 +346,6 @@ export default function Home() {
       } finally {
         setIsAiLoading(false);
       }
-      
-      setQuizStage('revision_snapshot');
     }
   };
 
@@ -363,8 +378,10 @@ export default function Home() {
       setIsAiLoading(false);
       setCurrentQuizQuestionIndex(0);
       setQuizResults([]);
+      setFinalResults([]);
       setQualitativeReview(null);
       setExpandedQuestions({});
+      setHasCheckedAnswer(false);
       setQuizStage('quiz');
     }
   };
@@ -693,7 +710,13 @@ export default function Home() {
                     <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-800">
                       <button
                         onClick={handleSkipQuizQuestion}
-                        className="text-slate-400 hover:text-white px-4 py-2 rounded hover:bg-slate-800 transition-colors"
+                        disabled={hasCheckedAnswer}
+                        className={clsx(
+                          "px-4 py-2 rounded transition-colors",
+                          hasCheckedAnswer 
+                            ? "text-slate-600 cursor-not-allowed" 
+                            : "text-slate-400 hover:text-white hover:bg-slate-800"
+                        )}
                       >
                         Skip Question
                       </button>
@@ -743,12 +766,14 @@ export default function Home() {
                 </div>
               )}
 
-              {quizStage === 'revision_snapshot' && !isAiLoading && (() => {
+              {quizStage === 'revision_snapshot' && (() => {
+                // Use finalResults which is set synchronously before transition
+                const resultsToShow = finalResults.length > 0 ? finalResults : quizResults;
                 console.log('=== REVISION SNAPSHOT DISPLAY ===');
-                console.log('Quiz Results:', quizResults);
-                console.log('Correct count:', quizResults.filter(r => r.correct).length);
+                console.log('Final Results:', resultsToShow);
+                console.log('Correct count:', resultsToShow.filter(r => r.correct).length);
                 console.log('Total questions:', quizQuestions.length);
-                quizResults.forEach((r, i) => {
+                resultsToShow.forEach((r, i) => {
                   console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
                 });
                 return true;
@@ -757,12 +782,13 @@ export default function Home() {
                   <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
                       <span className="text-4xl font-bold text-white">
-                        {quizResults.filter(r => r.correct).length}/{quizQuestions.length}
+                        {(finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length}/{quizQuestions.length}
                       </span>
                     </div>
                     <h2 className="text-3xl font-bold text-white mb-2">Revision Snapshot</h2>
                     {(() => {
-                      const score = quizResults.filter(r => r.correct).length;
+                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                      const score = resultsToUse.filter(r => r.correct).length;
                       const total = quizQuestions.length;
                       const percentage = (score / total) * 100;
                       if (percentage === 100) return <p className="text-xl text-green-400">Perfect! You're ready for the main quiz! 🌟</p>;
@@ -789,7 +815,8 @@ export default function Home() {
 
                   <div className="space-y-3 mb-8">
                     {quizQuestions.map((q, idx) => {
-                      const result = quizResults.find(r => r.questionId === q.id);
+                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                      const result = resultsToUse.find(r => r.questionId === q.id);
                       const isExpanded = expandedQuestions[q.id] || false;
 
                       return (
@@ -868,8 +895,10 @@ export default function Home() {
                       onClick={() => {
                         setQuizStage('config');
                         setQuizResults([]);
+                        setFinalResults([]);
                         setQualitativeReview(null);
                         setExpandedQuestions({});
+                        setHasCheckedAnswer(false);
                       }}
                       className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
                     >
@@ -1022,8 +1051,10 @@ export default function Home() {
                       onClick={() => {
                         setQuizStage('config');
                         setQuizResults([]);
+                        setFinalResults([]);
                         setQualitativeReview(null);
                         setExpandedQuestions({});
+                        setHasCheckedAnswer(false);
                       }}
                       className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
                     >
@@ -1040,8 +1071,10 @@ export default function Home() {
                         }
                         setQuizStage('config');
                         setQuizResults([]);
+                        setFinalResults([]);
                         setQualitativeReview(null);
                         setExpandedQuestions({});
+                        setHasCheckedAnswer(false);
                       }}
                       className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
                     >

@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import QuizConfig from '@/components/QuizConfig';
 import { getRevisionQuestions, getQuizQuestions } from '@/lib/quiz-helpers';
+import RemarksModal from '@/components/RemarksModal';
 
 export default function Home() {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -48,7 +49,107 @@ export default function Home() {
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [qualitativeReview, setQualitativeReview] = useState<string | null>(null);
+  
+  // Remarks and test tracking
+  const [showRemarksModal, setShowRemarksModal] = useState(false);
+  const [currentTestId, setCurrentTestId] = useState<string | null>(null);
+  const [currentTestType, setCurrentTestType] = useState<'revision' | 'quiz'>('revision');
   const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean }>({});
+
+  // Save revision test results to database
+  const saveRevisionTest = async (results: typeof quizResults) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const skipped = results.filter(r => r.skipped).length;
+      const correct = results.filter(r => r.correct).length;
+      const wrong = results.filter(r => !r.correct && !r.skipped).length;
+
+      const { data, error } = await supabase
+        .from('revision_tests')
+        .insert({
+          user_id: user.id,
+          chapter_index: currentChapterIndex,
+          chapter_title: currentChapter.title,
+          questions_shown: results.length,
+          questions_skipped: skipped,
+          questions_correct: correct,
+          questions_wrong: wrong
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving revision test:', error);
+        return null;
+      }
+      
+      console.log('Revision test saved:', data.id);
+      return data.id;
+    } catch (err) {
+      console.error('Failed to save revision test:', err);
+      return null;
+    }
+  };
+
+  // Save quiz test results to database
+  const saveQuizTest = async (results: typeof quizResults) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const skipped = results.filter(r => r.skipped).length;
+      const correct = results.filter(r => r.correct).length;
+      const wrong = results.filter(r => !r.correct && !r.skipped).length;
+
+      const { data, error } = await supabase
+        .from('quiz_tests')
+        .insert({
+          user_id: user.id,
+          chapter_index: currentChapterIndex,
+          chapter_title: currentChapter.title,
+          questions_shown: results.length,
+          questions_skipped: skipped,
+          questions_correct: correct,
+          questions_wrong: wrong
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving quiz test:', error);
+        return null;
+      }
+      
+      console.log('Quiz test saved:', data.id);
+      return data.id;
+    } catch (err) {
+      console.error('Failed to save quiz test:', err);
+      return null;
+    }
+  };
+
+  // Update remarks for a test
+  const updateTestRemarks = async (testId: string, testType: 'revision' | 'quiz', remarks: string) => {
+    if (!testId || !remarks) return;
+    
+    try {
+      const table = testType === 'revision' ? 'revision_tests' : 'quiz_tests';
+      const { error } = await supabase
+        .from(table)
+        .update({ remarks })
+        .eq('id', testId);
+
+      if (error) {
+        console.error('Error updating remarks:', error);
+      } else {
+        console.log('Remarks saved successfully');
+      }
+    } catch (err) {
+      console.error('Failed to update remarks:', err);
+    }
+  };
 
   const askAI = async (type: 'explain_error' | 'hint') => {
     setIsAiLoading(true);
@@ -310,9 +411,20 @@ export default function Home() {
       setFinalResults(allResults);
       
       // Use correct snapshot stage based on current stage
-      const snapshotStage = quizStage === 'quiz' ? 'quiz_snapshot' : 'revision_snapshot';
+      const isQuizMode = quizStage === 'quiz';
+      const snapshotStage = isQuizMode ? 'quiz_snapshot' : 'revision_snapshot';
       console.log('Transitioning to:', snapshotStage);
       setQuizStage(snapshotStage);
+      
+      // Save to database
+      const testType = isQuizMode ? 'quiz' : 'revision';
+      setCurrentTestType(testType);
+      const testId = isQuizMode 
+        ? await saveQuizTest(allResults)
+        : await saveRevisionTest(allResults);
+      if (testId) {
+        setCurrentTestId(testId);
+      }
       
       // Generate qualitative review
       setIsAiLoading(true);
@@ -347,6 +459,8 @@ export default function Home() {
         setQualitativeReview("Great effort on the revision! Keep practicing to strengthen your Python skills.");
       } finally {
         setIsAiLoading(false);
+        // Show remarks modal after everything is loaded
+        setTimeout(() => setShowRemarksModal(true), 500);
       }
     }
   };
@@ -464,9 +578,17 @@ export default function Home() {
     } else {
       // Last question - show loading while we wait for evaluations to complete
       setIsAiLoading(true);
+      setQuizStage('quiz_snapshot');
       
       // Wait for background evaluations to complete (they run in parallel)
       await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Save quiz results to database
+      setCurrentTestType('quiz');
+      const testId = await saveQuizTest(allResults);
+      if (testId) {
+        setCurrentTestId(testId);
+      }
       
       // Generate qualitative review using the evaluated results
       try {
@@ -497,7 +619,8 @@ export default function Home() {
       }
       
       setIsAiLoading(false);
-      setQuizStage('quiz_snapshot');
+      // Show remarks modal after everything is loaded
+      setTimeout(() => setShowRemarksModal(true), 500);
     }
   };
 
@@ -1387,6 +1510,17 @@ export default function Home() {
           </div>
         )
       }
+      {/* Remarks Modal */}
+      <RemarksModal
+        isOpen={showRemarksModal}
+        onClose={() => setShowRemarksModal(false)}
+        onSubmit={async (remarks) => {
+          if (currentTestId && remarks) {
+            await updateTestRemarks(currentTestId, currentTestType, remarks);
+          }
+        }}
+        type={currentTestType}
+      />
     </main >
   );
 }

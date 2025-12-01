@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'day'; // 'day' or 'week'
 
+    // Create server-side Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
     // Calculate time range
     const now = new Date();
     const daysAgo = period === 'day' ? 1 : 7;
     const startDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+
+    console.log(`[Analytics API] Fetching ${period} data from ${startDate.toISOString()}`);
 
     // Get analytics data
     const { data: analytics, error } = await supabase
@@ -20,8 +27,10 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Analytics fetch error:', error);
-      return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch analytics', details: error.message }, { status: 500 });
     }
+
+    console.log(`[Analytics API] Found ${analytics?.length || 0} records`);
 
     // Calculate stats
     const totalViews = analytics?.length || 0;

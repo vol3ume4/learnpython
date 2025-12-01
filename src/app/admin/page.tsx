@@ -143,16 +143,73 @@ export default function AdminPage() {
   const loadAnalytics = async () => {
     try {
       setAnalyticsLoading(true);
-      const [dayRes, weekRes] = await Promise.all([
-        fetch('/api/analytics?period=day'),
-        fetch('/api/analytics?period=week')
+      
+      // Calculate time ranges
+      const now = new Date();
+      const dayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Fetch day and week data in parallel
+      const [dayResult, weekResult] = await Promise.all([
+        supabase
+          .from('analytics')
+          .select('*')
+          .gte('created_at', dayAgo.toISOString())
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('analytics')
+          .select('*')
+          .gte('created_at', weekAgo.toISOString())
+          .order('created_at', { ascending: false })
       ]);
 
-      const dayData = await dayRes.json();
-      const weekData = await weekRes.json();
+      if (dayResult.error) {
+        console.error('Day analytics error:', dayResult.error);
+      }
+      if (weekResult.error) {
+        console.error('Week analytics error:', weekResult.error);
+      }
 
-      setAnalyticsDay(dayData);
-      setAnalyticsWeek(weekData);
+      // Process day data
+      const dayAnalytics = dayResult.data || [];
+      const dayStats = {
+        period: 'day',
+        totalViews: dayAnalytics.length,
+        uniqueUsers: new Set(dayAnalytics.map(a => a.user_id)).size,
+        chapterViews: {} as { [key: string]: number },
+        pageViews: {} as { [key: string]: number },
+        hourlyViews: {} as { [key: number]: number }
+      };
+      dayAnalytics.forEach(a => {
+        const chapter = a.chapter_title || 'Unknown';
+        dayStats.chapterViews[chapter] = (dayStats.chapterViews[chapter] || 0) + 1;
+        dayStats.pageViews[a.page_path] = (dayStats.pageViews[a.page_path] || 0) + 1;
+        const hour = new Date(a.created_at).getHours();
+        dayStats.hourlyViews[hour] = (dayStats.hourlyViews[hour] || 0) + 1;
+      });
+
+      // Process week data
+      const weekAnalytics = weekResult.data || [];
+      const weekStats = {
+        period: 'week',
+        totalViews: weekAnalytics.length,
+        uniqueUsers: new Set(weekAnalytics.map(a => a.user_id)).size,
+        chapterViews: {} as { [key: string]: number },
+        pageViews: {} as { [key: string]: number },
+        hourlyViews: {} as { [key: number]: number }
+      };
+      weekAnalytics.forEach(a => {
+        const chapter = a.chapter_title || 'Unknown';
+        weekStats.chapterViews[chapter] = (weekStats.chapterViews[chapter] || 0) + 1;
+        weekStats.pageViews[a.page_path] = (weekStats.pageViews[a.page_path] || 0) + 1;
+        const hour = new Date(a.created_at).getHours();
+        weekStats.hourlyViews[hour] = (weekStats.hourlyViews[hour] || 0) + 1;
+      });
+
+      console.log('Analytics loaded:', { day: dayStats, week: weekStats });
+
+      setAnalyticsDay(dayStats);
+      setAnalyticsWeek(weekStats);
     } catch (error) {
       console.error('Failed to load analytics:', error);
     } finally {

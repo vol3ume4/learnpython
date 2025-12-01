@@ -64,12 +64,18 @@ export default function Home() {
           quizStage === 'quiz_snapshot' ? '/quiz-snapshot' :
           `/chapter/${currentChapterIndex}/section/${currentSectionIndex}`;
 
-        await supabase.from('analytics').insert({
+        const { data, error } = await supabase.from('analytics').insert({
           user_id: user.id,
           page_path: pagePath,
           chapter_index: currentChapterIndex,
           chapter_title: currentChapter.title
         });
+
+        if (error) {
+          console.error('Analytics insert error:', error);
+        } else {
+          console.log('✅ Analytics tracked:', pagePath);
+        }
       } catch (err) {
         // Silently fail - analytics shouldn't break the app
         console.error('Analytics tracking failed:', err);

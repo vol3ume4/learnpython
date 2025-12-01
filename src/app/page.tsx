@@ -51,11 +51,23 @@ export default function Home() {
   useEffect(() => {
     const trackPageView = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        console.log('[Analytics] Tracking attempt...', { currentChapterIndex, currentSectionIndex, quizStage });
+        
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error('[Analytics] User fetch error:', userError);
+          return;
+        }
+        if (!user) {
+          console.log('[Analytics] No user, skipping');
+          return;
+        }
 
         const currentChapter = courseData.chapters[currentChapterIndex];
-        if (!currentChapter) return;
+        if (!currentChapter) {
+          console.log('[Analytics] No chapter found, skipping');
+          return;
+        }
 
         const pagePath = quizStage === 'config' ? '/quiz-config' :
           quizStage === 'revision' ? '/revision' :
@@ -64,21 +76,25 @@ export default function Home() {
           quizStage === 'quiz_snapshot' ? '/quiz-snapshot' :
           `/chapter/${currentChapterIndex}/section/${currentSectionIndex}`;
 
-        const { data, error } = await supabase.from('analytics').insert({
+        const payload = {
           user_id: user.id,
           page_path: pagePath,
           chapter_index: currentChapterIndex,
           chapter_title: currentChapter.title
-        });
+        };
+
+        console.log('[Analytics] Inserting:', payload);
+
+        const { data, error } = await supabase.from('analytics').insert(payload);
 
         if (error) {
-          console.error('Analytics insert error:', error);
+          console.error('❌ Analytics insert error:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
         } else {
-          console.log('✅ Analytics tracked:', pagePath);
+          console.log('✅ Analytics tracked:', pagePath, data);
         }
       } catch (err) {
-        // Silently fail - analytics shouldn't break the app
-        console.error('Analytics tracking failed:', err);
+        console.error('❌ Analytics tracking exception:', err);
       }
     };
 

@@ -47,6 +47,40 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  // Track page views for analytics
+  useEffect(() => {
+    const trackPageView = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const currentChapter = courseData.chapters[currentChapterIndex];
+        if (!currentChapter) return;
+
+        const pagePath = quizStage === 'config' ? '/quiz-config' :
+          quizStage === 'revision' ? '/revision' :
+          quizStage === 'quiz' ? '/quiz' :
+          quizStage === 'revision_snapshot' ? '/revision-snapshot' :
+          quizStage === 'quiz_snapshot' ? '/quiz-snapshot' :
+          `/chapter/${currentChapterIndex}/section/${currentSectionIndex}`;
+
+        await supabase.from('analytics').insert({
+          user_id: user.id,
+          page_path: pagePath,
+          chapter_index: currentChapterIndex,
+          chapter_title: currentChapter.title
+        });
+      } catch (err) {
+        // Silently fail - analytics shouldn't break the app
+        console.error('Analytics tracking failed:', err);
+      }
+    };
+
+    // Track on mount and when chapter/section/quiz stage changes
+    const timeoutId = setTimeout(trackPageView, 1000); // Debounce to avoid too many inserts
+    return () => clearTimeout(timeoutId);
+  }, [currentChapterIndex, currentSectionIndex, quizStage]);
+
   // AI Tutor State
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);

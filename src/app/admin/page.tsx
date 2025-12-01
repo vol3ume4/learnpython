@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Users, BookOpen, ClipboardCheck, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Users, BookOpen, ClipboardCheck, MessageSquare, ArrowLeft, BarChart3, TrendingUp } from 'lucide-react';
 
 interface RevisionTest {
   id: string;
@@ -41,6 +41,15 @@ interface ChapterStats {
   quiz_avg_attempted: number;
 }
 
+interface AnalyticsData {
+  period: string;
+  totalViews: number;
+  uniqueUsers: number;
+  chapterViews: { [key: string]: number };
+  pageViews: { [key: string]: number };
+  hourlyViews: { [key: number]: number };
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -50,6 +59,9 @@ export default function AdminPage() {
   const [quizTests, setQuizTests] = useState<QuizTest[]>([]);
   const [chapterStats, setChapterStats] = useState<ChapterStats[]>([]);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
+  const [analyticsDay, setAnalyticsDay] = useState<AnalyticsData | null>(null);
+  const [analyticsWeek, setAnalyticsWeek] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -85,7 +97,8 @@ export default function AdminPage() {
         loadUserCount(),
         loadRevisionTests(),
         loadQuizTests(),
-        loadFeedback()
+        loadFeedback(),
+        loadAnalytics()
       ]);
 
     } catch (error) {
@@ -125,6 +138,26 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false });
     setFeedbackList(data || []);
+  };
+
+  const loadAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const [dayRes, weekRes] = await Promise.all([
+        fetch('/api/analytics?period=day'),
+        fetch('/api/analytics?period=week')
+      ]);
+
+      const dayData = await dayRes.json();
+      const weekData = await weekRes.json();
+
+      setAnalyticsDay(dayData);
+      setAnalyticsWeek(weekData);
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -205,6 +238,104 @@ export default function AdminPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to App
           </button>
+        </div>
+
+        {/* Analytics Section */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+          <div className="flex items-center gap-2 mb-6">
+            <BarChart3 className="w-5 h-5 text-blue-400" />
+            <h2 className="text-xl font-bold text-white">Usage Analytics</h2>
+          </div>
+
+          {analyticsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Last 24 Hours */}
+              <div className="bg-slate-800/50 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Last 24 Hours</h3>
+                  <TrendingUp className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Total Page Views</span>
+                    <span className="text-2xl font-bold text-white">{analyticsDay?.totalViews || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Unique Users</span>
+                    <span className="text-2xl font-bold text-blue-400">{analyticsDay?.uniqueUsers || 0}</span>
+                  </div>
+                  {analyticsDay && Object.keys(analyticsDay.chapterViews).length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-700">
+                      <p className="text-sm text-slate-400 mb-2">Top Chapters:</p>
+                      {Object.entries(analyticsDay.chapterViews)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([chapter, views]) => (
+                          <div key={chapter} className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-slate-300 truncate max-w-[200px]">{chapter}</span>
+                            <span className="text-green-400 font-medium">{views}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Last 7 Days */}
+              <div className="bg-slate-800/50 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Last 7 Days</h3>
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Total Page Views</span>
+                    <span className="text-2xl font-bold text-white">{analyticsWeek?.totalViews || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Unique Users</span>
+                    <span className="text-2xl font-bold text-purple-400">{analyticsWeek?.uniqueUsers || 0}</span>
+                  </div>
+                  {analyticsWeek && Object.keys(analyticsWeek.chapterViews).length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-700">
+                      <p className="text-sm text-slate-400 mb-2">Top Chapters:</p>
+                      {Object.entries(analyticsWeek.chapterViews)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([chapter, views]) => (
+                          <div key={chapter} className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-slate-300 truncate max-w-[200px]">{chapter}</span>
+                            <span className="text-purple-400 font-medium">{views}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Page Views Breakdown */}
+          {!analyticsLoading && analyticsDay && analyticsWeek && (
+            <div className="mt-6 pt-6 border-t border-slate-800">
+              <h3 className="text-md font-semibold text-white mb-4">Page Views Breakdown (Last 7 Days)</h3>
+              <div className="space-y-2">
+                {Object.entries(analyticsWeek.pageViews)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 5)
+                  .map(([page, views]) => (
+                    <div key={page} className="flex items-center justify-between bg-slate-800/30 rounded-lg p-3">
+                      <span className="text-slate-300 text-sm font-mono">{page}</span>
+                      <span className="text-blue-400 font-semibold">{views}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Summary Cards */}

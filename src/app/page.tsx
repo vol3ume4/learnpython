@@ -52,7 +52,7 @@ export default function Home() {
     const trackPageView = async () => {
       try {
         console.log('[Analytics] Tracking attempt...', { currentChapterIndex, currentSectionIndex, quizStage });
-        
+
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError) {
           console.error('[Analytics] User fetch error:', userError);
@@ -71,10 +71,10 @@ export default function Home() {
 
         const pagePath = quizStage === 'config' ? '/quiz-config' :
           quizStage === 'revision' ? '/revision' :
-          quizStage === 'quiz' ? '/quiz' :
-          quizStage === 'revision_snapshot' ? '/revision-snapshot' :
-          quizStage === 'quiz_snapshot' ? '/quiz-snapshot' :
-          `/chapter/${currentChapterIndex}/section/${currentSectionIndex}`;
+            quizStage === 'quiz' ? '/quiz' :
+              quizStage === 'revision_snapshot' ? '/revision-snapshot' :
+                quizStage === 'quiz_snapshot' ? '/quiz-snapshot' :
+                  `/chapter/${currentChapterIndex}/section/${currentSectionIndex}`;
 
         const payload = {
           user_id: user.id,
@@ -107,7 +107,7 @@ export default function Home() {
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [qualitativeReview, setQualitativeReview] = useState<string | null>(null);
-  
+
   // Feedback and privacy
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showPrivacyDisclaimer, setShowPrivacyDisclaimer] = useState(false);
@@ -129,7 +129,7 @@ export default function Home() {
         questions_shown: results.length,
         questions_attempted: attempted
       });
-      
+
       console.log('Revision test logged (attempts only)');
     } catch (err) {
       console.error('Failed to save revision test:', err);
@@ -151,7 +151,7 @@ export default function Home() {
         questions_shown: results.length,
         questions_attempted: attempted
       });
-      
+
       console.log('Quiz test logged (attempts only)');
     } catch (err) {
       console.error('Failed to save quiz test:', err);
@@ -161,7 +161,7 @@ export default function Home() {
   // Generate context string for feedback
   const getFeedbackContext = () => {
     let context = `Chapter ${currentChapterIndex + 1}: ${currentChapter.title}`;
-    
+
     if (quizStage === 'revision') {
       context += ` > Revision > Q${currentQuizQuestionIndex + 1}`;
     } else if (quizStage === 'quiz') {
@@ -175,7 +175,7 @@ export default function Home() {
     } else {
       context += ` > ${currentSection.title}`;
     }
-    
+
     return context;
   };
 
@@ -286,19 +286,19 @@ export default function Home() {
 
       if (data.correct !== undefined) {
         console.log('Setting isCorrect to:', data.correct);
-        
+
         // Double-check: if AI says incorrect but output actually matches, override
         const expected = exercise.expectedOutput.trim().toLowerCase();
         const actual = output.join('\n').trim().toLowerCase();
-        const outputMatches = actual === expected || 
-                             actual.includes(expected) || 
-                             expected.includes(actual);
-        
+        const outputMatches = actual === expected ||
+          actual.includes(expected) ||
+          expected.includes(actual);
+
         console.log('Comparison:', { expected, actual, outputMatches, aiCorrect: data.correct });
-        
+
         // Mark that Check Answer was clicked (disables Skip button)
         setHasCheckedAnswer(true);
-        
+
         if (!data.correct && outputMatches) {
           console.log('AI marked wrong but output matches - overriding to correct');
           setIsCorrect(true);
@@ -369,7 +369,7 @@ export default function Home() {
   const navigateToSection = (chapterIdx: number, sectionIdx: number) => {
     // Don't allow navigation to coming soon chapters
     if (courseData.chapters[chapterIdx]?.comingSoon) return;
-    
+
     setCurrentChapterIndex(chapterIdx);
     setCurrentSectionIndex(sectionIdx);
     setCurrentExerciseIndex(0);
@@ -396,7 +396,7 @@ export default function Home() {
   const handleSkipQuizQuestion = () => {
     // Only allow skip if Check Answer hasn't been clicked
     if (hasCheckedAnswer) return;
-    
+
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: false,
@@ -412,7 +412,7 @@ export default function Home() {
 
   const handleNextQuizQuestion = () => {
     console.log('Storing revision result - isCorrect:', isCorrect, 'for question:', currentQuizQuestionIndex + 1);
-    
+
     const newResult = {
       questionId: quizQuestions[currentQuizQuestionIndex].id,
       correct: isCorrect === true,
@@ -422,7 +422,7 @@ export default function Home() {
       userCode: code,
       userOutput: output.join('\n')
     };
-    
+
     console.log('Result being stored:', newResult);
     const allResults = [...quizResults, newResult];
     setQuizResults(allResults);
@@ -432,7 +432,7 @@ export default function Home() {
   const handleNextQuizQuestionLogic = async (allResults: typeof quizResults) => {
     // Reset for next question
     setHasCheckedAnswer(false);
-    
+
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
       setCurrentQuizQuestionIndex(prev => prev + 1);
       setIsCorrect(null);
@@ -442,20 +442,20 @@ export default function Home() {
       // IMPORTANT: Store final results BEFORE transitioning
       console.log('Questions complete. Final results:', allResults);
       setFinalResults(allResults);
-      
+
       // Use correct snapshot stage based on current stage
       const isQuizMode = quizStage === 'quiz';
       const snapshotStage = isQuizMode ? 'quiz_snapshot' : 'revision_snapshot';
       console.log('Transitioning to:', snapshotStage);
       setQuizStage(snapshotStage);
-      
+
       // Save to database (only tracks attempts, not scores)
       if (isQuizMode) {
         await saveQuizTest(allResults);
       } else {
         await saveRevisionTest(allResults);
       }
-      
+
       // Generate qualitative review
       setIsAiLoading(true);
       try {
@@ -468,7 +468,7 @@ export default function Home() {
           correct: result.correct || false,
           feedback: result.feedback || ''
         }));
-        
+
         console.log('Sending to qualitative review:', answersToReview);
 
         const reviewResponse = await fetch('/api/qualitative-review', {
@@ -495,6 +495,9 @@ export default function Home() {
 
   const startMainQuiz = async () => {
     setIsAiLoading(true);
+    // Clear any pending evaluation promises from previous quiz
+    evaluationPromisesRef.current = [];
+
     try {
       const response = await fetch('/api/generate-quiz', {
         method: 'POST',
@@ -532,16 +535,19 @@ export default function Home() {
 
   // batchEvaluateQuiz removed - now using individual background Gemini calls per question
 
+  // Track evaluation promises to ensure all complete before showing results
+  const evaluationPromisesRef = React.useRef<Promise<void>[]>([]);
+
   // Background evaluation for a single quiz question using Gemini
   const evaluateQuizQuestionInBackground = async (
     questionIndex: number,
     exercise: Exercise,
     userCode: string,
     userOutput: string
-  ) => {
+  ): Promise<void> => {
     try {
       console.log(`Background Gemini eval starting for Q${questionIndex + 1}`);
-      
+
       const response = await fetch('/api/analyze-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -556,18 +562,61 @@ export default function Home() {
       const data = await response.json();
       console.log(`Background Gemini eval result for Q${questionIndex + 1}:`, data);
 
+      // Check if API returned an error
+      if (data._error || !response.ok) {
+        console.warn(`Gemini API failed for Q${questionIndex + 1}, using fallback comparison`);
+        // Fallback: simple output comparison
+        const expected = exercise.expectedOutput.trim().toLowerCase();
+        const actual = userOutput.trim().toLowerCase();
+        const isCorrect = actual === expected || actual.includes(expected) || expected.includes(actual);
+
+        const updateResult = (prev: typeof quizResults) => prev.map((r, idx) =>
+          idx === questionIndex
+            ? {
+              ...r,
+              correct: isCorrect,
+              feedback: isCorrect ? "Output matches expected!" : "Output doesn't match expected output.",
+              suggestion: isCorrect ? "" : "Compare your output with the expected output carefully."
+            }
+            : r
+        );
+
+        setQuizResults(updateResult);
+        setFinalResults(updateResult);
+        return;
+      }
+
       // Update the specific result in quizResults and finalResults
-      const updateResult = (prev: typeof quizResults) => prev.map((r, idx) => 
-        idx === questionIndex 
+      const updateResult = (prev: typeof quizResults) => prev.map((r, idx) =>
+        idx === questionIndex
           ? { ...r, correct: data.correct ?? false, feedback: data.feedback || "", suggestion: data.suggestion || "" }
           : r
       );
-      
+
       setQuizResults(updateResult);
       setFinalResults(updateResult);
 
     } catch (error) {
       console.error(`Background Gemini eval failed for Q${questionIndex + 1}:`, error);
+
+      // Fallback: simple output comparison
+      const expected = exercise.expectedOutput.trim().toLowerCase();
+      const actual = userOutput.trim().toLowerCase();
+      const isCorrect = actual === expected || actual.includes(expected) || expected.includes(actual);
+
+      const updateResult = (prev: typeof quizResults) => prev.map((r, idx) =>
+        idx === questionIndex
+          ? {
+            ...r,
+            correct: isCorrect,
+            feedback: isCorrect ? "Output matches expected!" : "Output doesn't match expected output.",
+            suggestion: isCorrect ? "" : "Compare your output with the expected output carefully."
+          }
+          : r
+      );
+
+      setQuizResults(updateResult);
+      setFinalResults(updateResult);
     }
   };
 
@@ -595,8 +644,9 @@ export default function Home() {
     setQuizResults(allResults);
     setFinalResults(allResults);
 
-    // Start background Gemini evaluation (don't await - runs async while user continues)
-    evaluateQuizQuestionInBackground(questionIndex, exercise, code, output.join('\n'));
+    // Start background Gemini evaluation and track the promise
+    const evalPromise = evaluateQuizQuestionInBackground(questionIndex, exercise, code, output.join('\n'));
+    evaluationPromisesRef.current.push(evalPromise);
 
     if (currentQuizQuestionIndex < quizQuestions.length - 1) {
       // Move to next question immediately (Gemini evaluation happens in background)
@@ -604,16 +654,30 @@ export default function Home() {
       setIsCorrect(null);
       resetOutput();
     } else {
-      // Last question - show loading while we wait for evaluations to complete
+      // Last question - show loading while we wait for ALL evaluations to complete
       setIsAiLoading(true);
       setQuizStage('quiz_snapshot');
-      
-      // Wait for background evaluations to complete (they run in parallel)
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
+      console.log(`Waiting for ${evaluationPromisesRef.current.length} evaluations to complete...`);
+
+      // Wait for ALL background evaluations to complete with timeout
+      try {
+        await Promise.race([
+          Promise.all(evaluationPromisesRef.current),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Evaluation timeout')), 10000))
+        ]);
+        console.log('All evaluations completed successfully');
+      } catch (error) {
+        console.warn('Some evaluations timed out or failed:', error);
+        // Continue anyway - we have fallback logic in evaluateQuizQuestionInBackground
+      }
+
+      // Clear the promises array for next quiz
+      evaluationPromisesRef.current = [];
+
       // Save quiz to database (only tracks attempts, not scores)
       await saveQuizTest(allResults);
-      
+
       // Generate qualitative review using the evaluated results
       try {
         const reviewResponse = await fetch('/api/qualitative-review', {
@@ -632,16 +696,19 @@ export default function Home() {
             chapterTitle: currentChapter.title
           })
         });
-        
+
         const reviewData = await reviewResponse.json();
         if (reviewData.review) {
           setQualitativeReview(reviewData.review);
+        } else {
+          // Fallback if review generation fails
+          setQualitativeReview("Great work completing the quiz! Keep practicing to strengthen your Python skills.");
         }
       } catch (error) {
         console.error('Qualitative review failed:', error);
-        setQualitativeReview("Great work completing the quiz! Keep practicing.");
+        setQualitativeReview("Great work completing the quiz! Keep practicing to strengthen your Python skills.");
       }
-      
+
       setIsAiLoading(false);
     }
   };
@@ -770,25 +837,25 @@ export default function Home() {
             <div className="theory-content">
               <ReactMarkdown
                 components={{
-                  h1: ({children}) => (
+                  h1: ({ children }) => (
                     <h1 className="text-3xl font-bold text-white mt-10 mb-6 pb-3 border-b border-slate-700/50">{children}</h1>
                   ),
-                  h2: ({children}) => (
+                  h2: ({ children }) => (
                     <h2 className="text-2xl font-semibold text-white mt-10 mb-5 flex items-center gap-3">
                       <span className="w-1 h-6 bg-blue-500 rounded-full"></span>
                       {children}
                     </h2>
                   ),
-                  h3: ({children}) => (
+                  h3: ({ children }) => (
                     <h3 className="text-xl font-medium text-slate-200 mt-8 mb-4">{children}</h3>
                   ),
-                  p: ({children}) => (
+                  p: ({ children }) => (
                     <p className="text-slate-300 text-lg leading-8 mb-6">{children}</p>
                   ),
-                  strong: ({children}) => (
+                  strong: ({ children }) => (
                     <strong className="text-white font-semibold">{children}</strong>
                   ),
-                  code: ({className, children}) => {
+                  code: ({ className, children }) => {
                     const isBlock = className?.includes('language-');
                     if (isBlock) {
                       return (
@@ -799,7 +866,7 @@ export default function Home() {
                       <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
                     );
                   },
-                  pre: ({children}) => (
+                  pre: ({ children }) => (
                     <div className="my-8 rounded-xl overflow-hidden border border-slate-700/50 shadow-lg shadow-black/20">
                       <div className="bg-slate-800/50 px-4 py-2 border-b border-slate-700/50 flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
@@ -810,33 +877,33 @@ export default function Home() {
                       <pre className="bg-slate-900/80 p-5 overflow-x-auto text-sm leading-relaxed">{children}</pre>
                     </div>
                   ),
-                  ul: ({children}) => (
+                  ul: ({ children }) => (
                     <ul className="my-6 space-y-3">{children}</ul>
                   ),
-                  ol: ({children}) => (
+                  ol: ({ children }) => (
                     <ol className="my-6 space-y-3 list-decimal list-inside">{children}</ol>
                   ),
-                  li: ({children}) => (
+                  li: ({ children }) => (
                     <li className="text-slate-300 text-lg leading-7 flex items-start gap-3">
                       <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
                       <span>{children}</span>
                     </li>
                   ),
-                  table: ({children}) => (
+                  table: ({ children }) => (
                     <div className="my-8 rounded-xl overflow-hidden border border-slate-700/50 shadow-lg shadow-black/10">
                       <table className="w-full">{children}</table>
                     </div>
                   ),
-                  thead: ({children}) => (
+                  thead: ({ children }) => (
                     <thead className="bg-slate-800/70">{children}</thead>
                   ),
-                  th: ({children}) => (
+                  th: ({ children }) => (
                     <th className="px-5 py-3.5 text-left text-sm font-semibold text-slate-200 border-b border-slate-700/50">{children}</th>
                   ),
-                  td: ({children}) => (
+                  td: ({ children }) => (
                     <td className="px-5 py-3.5 text-slate-300 border-b border-slate-800/50">{children}</td>
                   ),
-                  blockquote: ({children}) => (
+                  blockquote: ({ children }) => (
                     <blockquote className="my-6 pl-5 border-l-4 border-blue-500 bg-blue-500/5 py-4 pr-4 rounded-r-lg text-slate-300 italic">{children}</blockquote>
                   ),
                   hr: () => (
@@ -905,11 +972,11 @@ export default function Home() {
                     <div className="mb-6 text-slate-300 text-lg leading-relaxed">
                       <ReactMarkdown
                         components={{
-                          p: ({children}) => <span>{children}</span>,
-                          code: ({children}) => (
+                          p: ({ children }) => <span>{children}</span>,
+                          code: ({ children }) => (
                             <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
                           ),
-                          strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                          strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
                         }}
                       >
                         {quizQuestions[currentQuizQuestionIndex].question}
@@ -922,8 +989,8 @@ export default function Home() {
                         disabled={hasCheckedAnswer}
                         className={clsx(
                           "px-4 py-2 rounded transition-colors",
-                          hasCheckedAnswer 
-                            ? "text-slate-600 cursor-not-allowed" 
+                          hasCheckedAnswer
+                            ? "text-slate-600 cursor-not-allowed"
                             : "text-slate-400 hover:text-white hover:bg-slate-800"
                         )}
                       >
@@ -983,172 +1050,172 @@ export default function Home() {
                 console.log('Correct count:', resultsToShow.filter(r => r.correct).length);
                 console.log('Total questions:', quizQuestions.length);
                 resultsToShow.forEach((r, i) => {
-                  console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
+                  console.log(`Q${i + 1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
                 });
                 return true;
               })() && (
-                <div className="max-w-3xl mx-auto p-8">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
-                      <span className="text-4xl font-bold text-white">
-                        {(finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length}/{quizQuestions.length}
-                      </span>
+                  <div className="max-w-3xl mx-auto p-8">
+                    <div className="text-center mb-8">
+                      <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 mb-4">
+                        <span className="text-4xl font-bold text-white">
+                          {(finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length}/{quizQuestions.length}
+                        </span>
+                      </div>
+                      <h2 className="text-3xl font-bold text-white mb-2">Revision Snapshot</h2>
+                      {(() => {
+                        const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                        const score = resultsToUse.filter(r => r.correct).length;
+                        const total = quizQuestions.length;
+                        const percentage = (score / total) * 100;
+                        if (percentage === 100) return <p className="text-xl text-green-400">Perfect! You're ready for the main quiz! 🌟</p>;
+                        if (percentage >= 80) return <p className="text-xl text-blue-400">Great work! You've got this! 💪</p>;
+                        if (percentage >= 60) return <p className="text-xl text-yellow-400">Good progress! Review and try again! 📚</p>;
+                        if (percentage >= 40) return <p className="text-xl text-orange-400">Keep practicing! You're improving! 🔄</p>;
+                        return <p className="text-xl text-slate-400">Take your time and review the material! 🚀</p>;
+                      })()}
                     </div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Revision Snapshot</h2>
-                    {(() => {
-                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
-                      const score = resultsToUse.filter(r => r.correct).length;
-                      const total = quizQuestions.length;
-                      const percentage = (score / total) * 100;
-                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect! You're ready for the main quiz! 🌟</p>;
-                      if (percentage >= 80) return <p className="text-xl text-blue-400">Great work! You've got this! 💪</p>;
-                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good progress! Review and try again! 📚</p>;
-                      if (percentage >= 40) return <p className="text-xl text-orange-400">Keep practicing! You're improving! 🔄</p>;
-                      return <p className="text-xl text-slate-400">Take your time and review the material! 🚀</p>;
-                    })()}
-                  </div>
 
-                  {qualitativeReview && (
-                    <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="p-2 bg-purple-500/20 rounded-lg">
-                          <Lightbulb className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
-                          <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                    {qualitativeReview && (
+                      <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="p-2 bg-purple-500/20 rounded-lg">
+                            <Lightbulb className="w-6 h-6 text-purple-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
+                            <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="space-y-3 mb-8">
-                    {quizQuestions.map((q, idx) => {
-                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
-                      const result = resultsToUse.find(r => r.questionId === q.id);
-                      const isExpanded = expandedQuestions[q.id] || false;
+                    <div className="space-y-3 mb-8">
+                      {quizQuestions.map((q, idx) => {
+                        const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                        const result = resultsToUse.find(r => r.questionId === q.id);
+                        const isExpanded = expandedQuestions[q.id] || false;
 
-                      return (
-                        <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
-                          <button
-                            onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
-                            className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
-                                <div className="flex-1">
-                                  <p className="text-slate-300 font-medium">{q.question}</p>
-                                  {result?.feedback && !isExpanded && (
-                                    <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
-                                      AI: {result.feedback}
-                                    </p>
+                        return (
+                          <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                            <button
+                              onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
+                              className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
+                                  <div className="flex-1">
+                                    <p className="text-slate-300 font-medium">{q.question}</p>
+                                    {result?.feedback && !isExpanded && (
+                                      <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
+                                        AI: {result.feedback}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {result?.correct ? (
+                                    <CheckCircle className="w-5 h-5 text-green-400" />
+                                  ) : result?.skipped ? (
+                                    <>
+                                      <span className="text-xs text-slate-500 font-medium">Skipped</span>
+                                      <MinusCircle className="w-5 h-5 text-slate-500" />
+                                    </>
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-400" />
                                   )}
+                                  <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {result?.correct ? (
-                                  <CheckCircle className="w-5 h-5 text-green-400" />
-                                ) : result?.skipped ? (
-                                  <>
-                                    <span className="text-xs text-slate-500 font-medium">Skipped</span>
-                                    <MinusCircle className="w-5 h-5 text-slate-500" />
-                                  </>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
+                                {result?.skipped ? (
+                                  <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
+                                    <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                                    <p className="text-slate-400 font-medium">Question Skipped</p>
+                                    <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
+                                  </div>
                                 ) : (
-                                  <XCircle className="w-5 h-5 text-red-400" />
+                                  <>
+                                    {result?.userCode && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                        <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                          <code>{result.userCode}</code>
+                                        </pre>
+                                      </div>
+                                    )}
+
+                                    {result?.userOutput && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                        <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                          {result.userOutput}
+                                        </pre>
+                                      </div>
+                                    )}
+
+                                    {result?.feedback && (
+                                      <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                        <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                        <p className="text-sm text-blue-200">{result.feedback}</p>
+                                      </div>
+                                    )}
+
+                                    {result?.suggestion && !result.correct && (
+                                      <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                        <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                        <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
-                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                               </div>
-                            </div>
-                          </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                          {isExpanded && (
-                            <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
-                              {result?.skipped ? (
-                                <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
-                                  <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                                  <p className="text-slate-400 font-medium">Question Skipped</p>
-                                  <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
-                                </div>
-                              ) : (
-                                <>
-                                  {result?.userCode && (
-                                    <div>
-                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
-                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
-                                        <code>{result.userCode}</code>
-                                      </pre>
-                                    </div>
-                                  )}
-
-                                  {result?.userOutput && (
-                                    <div>
-                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
-                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
-                                        {result.userOutput}
-                                      </pre>
-                                    </div>
-                                  )}
-
-                                  {result?.feedback && (
-                                    <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
-                                      <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
-                                      <p className="text-sm text-blue-200">{result.feedback}</p>
-                                    </div>
-                                  )}
-
-                                  {result?.suggestion && !result.correct && (
-                                    <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
-                                      <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
-                                      <p className="text-sm text-yellow-200">{result.suggestion}</p>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    <div className="flex justify-center gap-4">
+                      <button
+                        onClick={() => {
+                          setQuizStage('config');
+                          setQuizResults([]);
+                          setFinalResults([]);
+                          setQualitativeReview(null);
+                          setExpandedQuestions({});
+                          setHasCheckedAnswer(false);
+                        }}
+                        className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                      >
+                        Retry Revision
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPendingTestType('quiz');
+                          setShowPrivacyDisclaimer(true);
+                        }}
+                        disabled={isAiLoading}
+                        className={clsx(
+                          "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
+                          isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500"
+                        )}
+                      >
+                        {isAiLoading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>Start Main Quiz <ChevronRight className="w-4 h-4" /></>
+                        )}
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => {
-                        setQuizStage('config');
-                        setQuizResults([]);
-                        setFinalResults([]);
-                        setQualitativeReview(null);
-                        setExpandedQuestions({});
-                        setHasCheckedAnswer(false);
-                      }}
-                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                    >
-                      Retry Revision
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPendingTestType('quiz');
-                        setShowPrivacyDisclaimer(true);
-                      }}
-                      disabled={isAiLoading}
-                      className={clsx(
-                        "px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2",
-                        isAiLoading ? "bg-blue-800 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500"
-                      )}
-                    >
-                      {isAiLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>Start Main Quiz <ChevronRight className="w-4 h-4" /></>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
 
               {quizStage === 'quiz_snapshot' && (() => {
                 // Use finalResults for quiz snapshot (set during batch evaluation)
@@ -1158,173 +1225,173 @@ export default function Home() {
                 console.log('Correct count:', resultsToShow.filter(r => r.correct).length);
                 console.log('Total questions:', quizQuestions.length);
                 resultsToShow.forEach((r, i) => {
-                  console.log(`Q${i+1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
+                  console.log(`Q${i + 1}: correct=${r.correct}, skipped=${r.skipped}, question=${r.question?.substring(0, 30)}...`);
                 });
                 return true;
               })() && (
-                <div className="max-w-3xl mx-auto p-8">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
-                      <span className="text-5xl font-bold text-white">
-                        {Math.round(((finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length / quizQuestions.length) * 100)}%
-                      </span>
+                  <div className="max-w-3xl mx-auto p-8">
+                    <div className="text-center mb-8">
+                      <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-4 border-blue-500 mb-6 shadow-2xl">
+                        <span className="text-5xl font-bold text-white">
+                          {Math.round(((finalResults.length > 0 ? finalResults : quizResults).filter(r => r.correct).length / quizQuestions.length) * 100)}%
+                        </span>
+                      </div>
+                      <h2 className="text-4xl font-bold text-white mb-3">Chapter Quiz Snapshot</h2>
+                      {(() => {
+                        const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                        const score = resultsToUse.filter(r => r.correct).length;
+                        const total = quizQuestions.length;
+                        const percentage = (score / total) * 100;
+
+                        if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python Pro! 🌟</p>;
+                        if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
+                        if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
+                        if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;
+                        return <p className="text-xl text-slate-400">Keep learning! Every attempt makes you stronger! 🚀</p>;
+                      })()}
                     </div>
-                    <h2 className="text-4xl font-bold text-white mb-3">Chapter Quiz Snapshot</h2>
-                    {(() => {
-                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
-                      const score = resultsToUse.filter(r => r.correct).length;
-                      const total = quizQuestions.length;
-                      const percentage = (score / total) * 100;
 
-                      if (percentage === 100) return <p className="text-xl text-green-400">Perfect score! You're a Python Pro! 🌟</p>;
-                      if (percentage >= 80) return <p className="text-xl text-blue-400">Excellent work! You've got a strong grasp! 💪</p>;
-                      if (percentage >= 60) return <p className="text-xl text-yellow-400">Good effort! Keep practicing to sharpen your skills! 📚</p>;
-                      if (percentage >= 40) return <p className="text-xl text-orange-400">You're making progress! Review the concepts and try again! 🔄</p>;
-                      return <p className="text-xl text-slate-400">Keep learning! Every attempt makes you stronger! 🚀</p>;
-                    })()}
-                  </div>
-
-                  {qualitativeReview && (
-                    <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="p-2 bg-purple-500/20 rounded-lg">
-                          <Lightbulb className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
-                          <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                    {qualitativeReview && (
+                      <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700/50 rounded-xl p-6 shadow-lg">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="p-2 bg-purple-500/20 rounded-lg">
+                            <Lightbulb className="w-6 h-6 text-purple-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-purple-300 mb-2">Your Personal Code Review</h3>
+                            <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qualitativeReview}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="space-y-3 mb-8">
-                    {quizQuestions.map((q, idx) => {
-                      const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
-                      const result = resultsToUse.find(r => r.questionId === q.id);
-                      const isExpanded = expandedQuestions[q.id] || false;
+                    <div className="space-y-3 mb-8">
+                      {quizQuestions.map((q, idx) => {
+                        const resultsToUse = finalResults.length > 0 ? finalResults : quizResults;
+                        const result = resultsToUse.find(r => r.questionId === q.id);
+                        const isExpanded = expandedQuestions[q.id] || false;
 
-                      return (
-                        <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
-                          <button
-                            onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
-                            className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
-                                <div className="flex-1">
-                                  <p className="text-slate-300 font-medium">{q.question}</p>
-                                  {result?.feedback && !isExpanded && (
-                                    <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
-                                      AI: {result.feedback}
-                                    </p>
+                        return (
+                          <div key={q.id} className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                            <button
+                              onClick={() => setExpandedQuestions(prev => ({ ...prev, [q.id]: !isExpanded }))}
+                              className="w-full p-4 text-left hover:bg-slate-800/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <span className="text-slate-500 font-mono text-sm font-bold mt-1">Q{idx + 1}</span>
+                                  <div className="flex-1">
+                                    <p className="text-slate-300 font-medium">{q.question}</p>
+                                    {result?.feedback && !isExpanded && (
+                                      <p className="text-sm text-slate-400 italic mt-1 line-clamp-1">
+                                        AI: {result.feedback}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {result?.correct ? (
+                                    <CheckCircle className="w-5 h-5 text-green-400" />
+                                  ) : result?.skipped ? (
+                                    <>
+                                      <span className="text-xs text-slate-500 font-medium">Skipped</span>
+                                      <MinusCircle className="w-5 h-5 text-slate-500" />
+                                    </>
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-400" />
                                   )}
+                                  <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {result?.correct ? (
-                                  <CheckCircle className="w-5 h-5 text-green-400" />
-                                ) : result?.skipped ? (
-                                  <>
-                                    <span className="text-xs text-slate-500 font-medium">Skipped</span>
-                                    <MinusCircle className="w-5 h-5 text-slate-500" />
-                                  </>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
+                                {result?.skipped ? (
+                                  <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
+                                    <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                                    <p className="text-slate-400 font-medium">Question Skipped</p>
+                                    <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
+                                  </div>
                                 ) : (
-                                  <XCircle className="w-5 h-5 text-red-400" />
+                                  <>
+                                    {result?.userCode && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
+                                        <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
+                                          <code>{result.userCode}</code>
+                                        </pre>
+                                      </div>
+                                    )}
+
+                                    {result?.userOutput && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
+                                        <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
+                                          {result.userOutput}
+                                        </pre>
+                                      </div>
+                                    )}
+
+                                    {result?.feedback && (
+                                      <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
+                                        <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
+                                        <p className="text-sm text-blue-200">{result.feedback}</p>
+                                      </div>
+                                    )}
+
+                                    {result?.suggestion && !result.correct && (
+                                      <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
+                                        <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
+                                        <p className="text-sm text-yellow-200">{result.suggestion}</p>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
-                                <ChevronRight className={clsx("w-4 h-4 text-slate-500 transition-transform", isExpanded && "rotate-90")} />
                               </div>
-                            </div>
-                          </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                          {isExpanded && (
-                            <div className="px-4 pb-4 space-y-3 border-t border-slate-800 pt-3">
-                              {result?.skipped ? (
-                                <div className="bg-slate-800/50 border border-slate-700 rounded p-4 text-center">
-                                  <MinusCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                                  <p className="text-slate-400 font-medium">Question Skipped</p>
-                                  <p className="text-sm text-slate-500 mt-1">No answer was submitted for this question.</p>
-                                </div>
-                              ) : (
-                                <>
-                                  {result?.userCode && (
-                                    <div>
-                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Code:</p>
-                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300 overflow-x-auto">
-                                        <code>{result.userCode}</code>
-                                      </pre>
-                                    </div>
-                                  )}
-
-                                  {result?.userOutput && (
-                                    <div>
-                                      <p className="text-xs text-slate-500 font-semibold mb-1">Your Output:</p>
-                                      <pre className="bg-slate-950 p-3 rounded text-sm text-slate-300">
-                                        {result.userOutput}
-                                      </pre>
-                                    </div>
-                                  )}
-
-                                  {result?.feedback && (
-                                    <div className="bg-blue-900/20 border border-blue-800/30 rounded p-3">
-                                      <p className="text-xs text-blue-400 font-semibold mb-1">AI Feedback:</p>
-                                      <p className="text-sm text-blue-200">{result.feedback}</p>
-                                    </div>
-                                  )}
-
-                                  {result?.suggestion && !result.correct && (
-                                    <div className="bg-yellow-900/20 border border-yellow-800/30 rounded p-3">
-                                      <p className="text-xs text-yellow-400 font-semibold mb-1">Suggestion:</p>
-                                      <p className="text-sm text-yellow-200">{result.suggestion}</p>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    <div className="flex justify-center gap-4">
+                      <button
+                        onClick={() => {
+                          setQuizStage('config');
+                          setQuizResults([]);
+                          setFinalResults([]);
+                          setQualitativeReview(null);
+                          setExpandedQuestions({});
+                          setHasCheckedAnswer(false);
+                        }}
+                        className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
+                      >
+                        Retry Quiz
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Navigate to next section or chapter
+                          if (!isLastSection) {
+                            setCurrentSectionIndex(prev => prev + 1);
+                          } else if (!isLastChapter) {
+                            setCurrentChapterIndex(prev => prev + 1);
+                            setCurrentSectionIndex(0);
+                          }
+                          setQuizStage('config');
+                          setQuizResults([]);
+                          setFinalResults([]);
+                          setQualitativeReview(null);
+                          setExpandedQuestions({});
+                          setHasCheckedAnswer(false);
+                        }}
+                        className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
+                      >
+                        Continue Learning <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => {
-                        setQuizStage('config');
-                        setQuizResults([]);
-                        setFinalResults([]);
-                        setQualitativeReview(null);
-                        setExpandedQuestions({});
-                        setHasCheckedAnswer(false);
-                      }}
-                      className="px-6 py-3 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700"
-                    >
-                      Retry Quiz
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Navigate to next section or chapter
-                        if (!isLastSection) {
-                          setCurrentSectionIndex(prev => prev + 1);
-                        } else if (!isLastChapter) {
-                          setCurrentChapterIndex(prev => prev + 1);
-                          setCurrentSectionIndex(0);
-                        }
-                        setQuizStage('config');
-                        setQuizResults([]);
-                        setFinalResults([]);
-                        setQualitativeReview(null);
-                        setExpandedQuestions({});
-                        setHasCheckedAnswer(false);
-                      }}
-                      className="px-8 py-3 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
-                    >
-                      Continue Learning <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
             </div>
           )}
 
@@ -1388,11 +1455,11 @@ export default function Home() {
                     <div className="mb-6 text-slate-300 text-lg leading-relaxed">
                       <ReactMarkdown
                         components={{
-                          p: ({children}) => <span>{children}</span>,
-                          code: ({children}) => (
+                          p: ({ children }) => <span>{children}</span>,
+                          code: ({ children }) => (
                             <code className="px-2 py-1 bg-slate-800/80 text-emerald-400 rounded-md text-[0.9em] font-mono border border-slate-700/50">{children}</code>
                           ),
-                          strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                          strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
                         }}
                       >
                         {currentExercise.question}

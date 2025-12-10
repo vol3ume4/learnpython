@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        const prompt = `You are evaluating a beginner Python student's code.
+        const prompt = `You are a supportive Python tutor evaluating a beginner student's code.
 
 **Question:** ${question}
 
@@ -38,16 +38,43 @@ ${output || 'No output'}
 **Expected Output:**
 ${expectedOutput || 'Check if code logic is correct'}
 
-**Evaluation Criteria:**
-1. Does the actual output match the expected output? (Be lenient with whitespace/formatting)
-2. If expected output is provided, compare it to actual output
-3. If the code achieves the task goal, mark as correct even if code style varies
-4. Only mark incorrect if output is clearly wrong or code doesn't work
+**Evaluation Instructions:**
 
-**IMPORTANT:** Be GENEROUS. If the output matches what was asked for, mark it CORRECT.
+1. **Be FACT-BASED on correctness:**
+   - Mark CORRECT only if BOTH code logic AND output are correct
+   - Mark INCORRECT if code logic is wrong OR output doesn't match expected
+   - Don't mark correct just because "it's close" or "they tried"
+
+2. **Check CODE LOGIC first:**
+   - Does the code use correct logic to solve the problem?
+   - Are variables used properly? (e.g., in loops, use loop variable 'ch', not the collection 'txt')
+   - Are conditions checking the right things? (e.g., 'if ch == "a"' not 'if "a" in txt' inside a loop)
+   - Does the code demonstrate understanding of the concept?
+
+3. **Then check OUTPUT:**
+   - Does actual output match expected output?
+   - Be lenient with whitespace/formatting differences only
+
+4. **Common beginner mistakes to catch:**
+   - Using wrong variable in loop (checking 'txt' instead of 'ch' in 'for ch in txt')
+   - Wrong comparison operators
+   - Logic that works by accident but doesn't show understanding
+
+**Tone & Feedback Style:**
+- Be HONEST about correctness (don't say correct if it's wrong)
+- Be ENCOURAGING in how you explain errors
+- Use supportive language: "Almost there!", "Good try!", "You're on the right track!"
+- Point out what they did RIGHT before explaining what needs fixing
+- Give specific, actionable hints
+
+**Example:**
+Question: Count "a" in "banana"
+Code: for ch in txt: if "a" in txt: count += 1
+Output: 6, Expected: 3
+Evaluation: INCORRECT - "Good effort on the loop structure! However, your code checks if 'a' exists in the entire string rather than checking each character. Try using 'if ch == \"a\"' to check the current character."
 
 Respond with JSON only (no markdown):
-{"correct": true/false, "feedback": "brief explanation", "suggestion": "hint if wrong or empty string"}`;
+{"correct": true/false, "feedback": "encouraging but honest explanation", "suggestion": "specific hint if wrong, or empty string if correct"}`;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
